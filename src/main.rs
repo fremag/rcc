@@ -1,25 +1,95 @@
+pub mod lexer;
+
 use std::env;
+use crate::lexer::Lexer;
+use std::fs;
 use std::process;
-use std::process::{Command};
-use std::path::PathBuf;
+use std::process::Command;
+use std::path::{Path, PathBuf};
+
+fn compute_output_file(input_file: &str) -> PathBuf {
+    let mut output_file = PathBuf::from(input_file);
+    output_file.set_extension("i");
+    output_file
+}
+
+fn run_preprocessor(gcc_path: &str, input_file: &str, output_file: &Path) -> std::io::Result<process::Output> {
+    Command::new(gcc_path)
+        .args(["-E", "-P", input_file, "-o", output_file.to_str().unwrap()])
+        .output()
+}
 
 fn main() -> Result<(), std::io::Error> {
     let args: Vec<String> = env::args().collect();
     let input_file = &args[1];
 
-    let mut output_file = PathBuf::from(input_file);
-    output_file.set_extension("i");
-    let x = output_file.to_str().unwrap();
+    let output_file = compute_output_file(input_file);
+    let output_file_str = output_file.to_str().unwrap();
 
-    println!("{input_file} => {x}");
+    println!("{input_file} => {output_file_str}");
 
-    let c = Command::new("/usr/bin/gcc")
-        .args(["-E", "-P", input_file, "-o", x])
-        .output()
+    let command = run_preprocessor("/usr/bin/gcc", input_file, &output_file)
         .expect("failed to execute process");
-
-    let output = String::from_utf8_lossy(&c.stdout);
+    let output = String::from_utf8_lossy(&command.stdout);
     println!("{output}");
+
+    let contents = fs::read_to_string(&output_file)
+         .expect("Should have been able to read the file");
+    let lexer  = Lexer::new(contents);
+    let tokens = match lexer.tokenize()  {
+        Err(err_msg) => {
+            print!("{err_msg}");
+            process::exit(1); 
+        }
+        Ok(tokens) => tokens
+    };
+    
+    println!("Tokens:");
+    for token in tokens {
+        println!("{token}");
+    }
+
     println!("Done.");
     process::exit(0);
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compute_output_file_replaces_c_extension() {
+        let out = compute_output_file("foo.c");
+        assert_eq!(out, PathBuf::from("foo.i"));
+    }
+
+    #[test]
+    fn compute_output_file_replaces_other_extension() {
+        let out = compute_output_file("path/to/source.cpp");
+        assert_eq!(out, PathBuf::from("path/to/source.i"));
+    }
+
+    #[test]
+    fn compute_output_file_adds_extension_when_missing() {
+        let out = compute_output_file("Makefile");
+        assert_eq!(out, PathBuf::from("Makefile.i"));
+    }
+
+    #[test]
+    fn compute_output_file_preserves_directory() {
+        let out = compute_output_file("/tmp/dir/program.c");
+        assert_eq!(out, PathBuf::from("/tmp/dir/program.i"));
+    }
+
+    #[test]
+    fn run_preprocessor_returns_error_for_missing_binary() {
+        let result = run_preprocessor(
+            "/nonexistent/path/to/gcc",
+            "input.c",
+            Path::new("output.i"),
+        );
+        assert!(result.is_err());
+    }
 }
