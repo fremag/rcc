@@ -53,8 +53,6 @@ fn main() -> Result<(), std::io::Error> {
     process::exit(0);
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -8,56 +8,76 @@ impl Lexer {
     }
 
     pub fn identifier_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<identifier>[a-zA-Z_]\w*)\b").unwrap()
+        regex::Regex::new(r"^(?<item>[a-zA-Z_]\w*)\b").unwrap()
     }
 
     pub fn constant_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<constant>[0-9]+)\b").unwrap()
+        regex::Regex::new(r"^(?<item>[0-9]+)\b").unwrap()
     }
 
     pub fn kw_int_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<int>int)\b").unwrap()
+        regex::Regex::new(r"^(?<item>int)\b").unwrap()
     }
 
     pub fn kw_void_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<void>void)\b").unwrap()
+        regex::Regex::new(r"^(?<item>void)\b").unwrap()
     }
 
     pub fn kw_return_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<return>return)\b").unwrap()
+        regex::Regex::new(r"^(?<item>return)\b").unwrap()
     }
 
     pub fn kw_open_par_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<openpar>\()").unwrap()
+        regex::Regex::new(r"^(?<item>\()").unwrap()
     }
     pub fn kw_close_par_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<closepar>\))").unwrap()
+        regex::Regex::new(r"^(?<item>\))").unwrap()
     }
 
     pub fn kw_open_brace_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<openbrace>\{)").unwrap()
+        regex::Regex::new(r"^(?<item>\{)").unwrap()
     }
     pub fn kw_close_brace_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<closebrace>})").unwrap()
+        regex::Regex::new(r"^(?<item>})").unwrap()
     }
 
     pub fn kw_semi_colon_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<semicolon>;)").unwrap()
+        regex::Regex::new(r"^(?<item>;)").unwrap()
     }
 
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
             return Err("Input is empty".to_string());
         }
-        let tokens = Vec::new();
+        let regexes = vec![ Lexer::identifier_regex(), Lexer::constant_regex(), Lexer::kw_int_regex(), Lexer::kw_void_regex(), Lexer::kw_return_regex(), Lexer::kw_open_par_regex(), Lexer::kw_close_par_regex(), Lexer::kw_open_brace_regex(), Lexer::kw_close_brace_regex(), Lexer::kw_semi_colon_regex()];
+        let mut tokens = Vec::new();
         let mut i = 0;
 
         while i < self.input.len() {
             let sub_str = &self.input[i..];
-            if sub_str.starts_with(" ") {
+            if sub_str.starts_with(" ") 
+            || sub_str.starts_with("\t")
+            || sub_str.starts_with("\r")
+            || sub_str.starts_with("\n") {
                 i += 1;
                 continue;
             }
+
+            let mut token = String::new();
+
+            for regex in regexes.iter() {
+                if let Some(caps) = regex.captures(sub_str) {
+                    let captured_token = caps.name("item").unwrap().as_str().to_string();
+                    if captured_token.len() >  token.len() {
+                        token = captured_token;
+                    }
+                }
+            }
+            if token.len() == 0 {
+                return Err(format!("Invalid token: {sub_str}"));
+            }
+            i += token.len();
+            tokens.push(token);
         }
         Ok(tokens)
     }
@@ -81,10 +101,11 @@ mod tests {
         let re = Lexer::identifier_regex();
         let x = match re.captures(value) {
             None => "xxx",
-            Some(caps) =>  caps.name("identifier").unwrap().as_str()
+            Some(caps) =>  caps.name("item").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
+
     #[test_case("abc", "xxx")]
     #[test_case("abc1;123", "xxx")]
     #[test_case("_a_", "xxx")]
@@ -95,7 +116,7 @@ mod tests {
         let re = Lexer::constant_regex();
         let x = match re.captures(value) {
             None => "xxx",
-            Some(caps) =>  caps.name("constant").unwrap().as_str()
+            Some(caps) =>  caps.name("item").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
@@ -109,7 +130,7 @@ mod tests {
         let re = Lexer::kw_int_regex();
         let x = match re.captures(value) {
             None => "xxx",
-            Some(caps) =>  caps.name("int").unwrap().as_str()
+            Some(caps) =>  caps.name("item").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
@@ -123,7 +144,7 @@ mod tests {
         let re = Lexer::kw_void_regex();
         let x = match re.captures(value) {
             None => "xxx",
-            Some(caps) =>  caps.name("void").unwrap().as_str()
+            Some(caps) =>  caps.name("item").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
@@ -136,7 +157,7 @@ mod tests {
         let re = Lexer::kw_return_regex();
         let x = match re.captures(value) {
             None => "xxx",
-            Some(caps) =>  caps.name("return").unwrap().as_str()
+            Some(caps) =>  caps.name("item").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
@@ -148,7 +169,7 @@ mod tests {
         let re = Lexer::kw_open_par_regex();
         let x = match re.captures(value) {
             None => "xxx",
-            Some(caps) =>  caps.name("openpar").unwrap().as_str()
+            Some(caps) =>  caps.name("item").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
@@ -161,7 +182,7 @@ mod tests {
         let re = Lexer::kw_close_par_regex();
         let x = match re.captures(value) {
             None => "xxx",
-            Some(caps) =>  caps.name("closepar").unwrap().as_str()
+            Some(caps) =>  caps.name("item").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
@@ -173,7 +194,7 @@ mod tests {
         let re = Lexer::kw_open_brace_regex();
         let x = match re.captures(value) {
             None => "xxx",
-            Some(caps) =>  caps.name("openbrace").unwrap().as_str()
+            Some(caps) =>  caps.name("item").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
@@ -185,7 +206,7 @@ mod tests {
         let re = Lexer::kw_close_brace_regex();
         let x = match re.captures(value) {
             None => "xxx",
-            Some(caps) =>  caps.name("closebrace").unwrap().as_str()
+            Some(caps) =>  caps.name("item").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
@@ -197,9 +218,15 @@ mod tests {
         let re = Lexer::kw_semi_colon_regex();
         let x = match re.captures(value) {
             None => "xxx",
-            Some(caps) =>  caps.name("semicolon").unwrap().as_str()
+            Some(caps) =>  caps.name("item").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
 
+    #[test]
+    fn tokenize_returns_tokens() {
+        let lexer = Lexer::new("\t\r         int f() \n        { return 5; };".to_string());
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens, vec!["int", "f", "(", ")", "{", "return", "5", ";", "}", ";"]);
+    }
 }
