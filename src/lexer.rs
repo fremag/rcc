@@ -19,6 +19,32 @@ impl Lexer {
         regex::Regex::new(r"^(?<int>int)\b").unwrap()
     }
 
+    pub fn kw_void_regex() -> regex::Regex {
+        regex::Regex::new(r"^(?<void>void)\b").unwrap()
+    }
+
+    pub fn kw_return_regex() -> regex::Regex {
+        regex::Regex::new(r"^(?<return>return)\b").unwrap()
+    }
+
+    pub fn kw_open_par_regex() -> regex::Regex {
+        regex::Regex::new(r"^(?<openpar>\()").unwrap()
+    }
+    pub fn kw_close_par_regex() -> regex::Regex {
+        regex::Regex::new(r"^(?<closepar>\))").unwrap()
+    }
+
+    pub fn kw_open_brace_regex() -> regex::Regex {
+        regex::Regex::new(r"^(?<openbrace>\{)").unwrap()
+    }
+    pub fn kw_close_brace_regex() -> regex::Regex {
+        regex::Regex::new(r"^(?<closebrace>})").unwrap()
+    }
+
+    pub fn kw_semi_colon_regex() -> regex::Regex {
+        regex::Regex::new(r"^(?<semicolon>;)").unwrap()
+    }
+
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
             return Err("Input is empty".to_string());
@@ -84,6 +110,94 @@ mod tests {
         let x = match re.captures(value) {
             None => "xxx",
             Some(caps) =>  caps.name("int").unwrap().as_str()
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("void", "void")]
+    #[test_case("avoid", "xxx")]
+    #[test_case("void_empty", "xxx")]
+    #[test_case("integer", "xxx")]
+    #[test_case("void f() { };", "void")]
+    fn void_regex(value: &str, expected: &str) {
+        let re = Lexer::kw_void_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) =>  caps.name("void").unwrap().as_str()
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("return", "return")]
+    #[test_case("returning", "xxx")]
+    #[test_case("return_empty", "xxx")]
+    #[test_case("int f() { return 5; };", "xxx")]
+    fn return_regex(value: &str, expected: &str) {
+        let re = Lexer::kw_return_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) =>  caps.name("return").unwrap().as_str()
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "(", "(")]
+    #[test_case("b", " ( ", "xxx")]
+    #[test_case("c", "int f() { return 5; };", "xxx")]
+    fn open_par_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_open_par_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) =>  caps.name("openpar").unwrap().as_str()
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", ")", ")")]
+    #[test_case("b", " ) ", "xxx")]
+    #[test_case("c", "int f() { return 5; };", "xxx")]
+    #[test_case("d", ")))", ")")]
+    fn close_par_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_close_par_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) =>  caps.name("closepar").unwrap().as_str()
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "{", "{")]
+    #[test_case("b", "{{ ", "{")]
+    #[test_case("c", "int f() { return 5; };", "xxx")]
+    fn open_brace_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_open_brace_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) =>  caps.name("openbrace").unwrap().as_str()
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "}", "}")]
+    #[test_case("b", "}}", "}")]
+    #[test_case("c", "int f() { return 5; };", "xxx")]
+    fn close_brace_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_close_brace_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) =>  caps.name("closebrace").unwrap().as_str()
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", ";", ";")]
+    #[test_case("b", ";;;;", ";")]
+    #[test_case("c", "int f() { return 5; };", "xxx")]
+    fn close_semicolon_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_semi_colon_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) =>  caps.name("semicolon").unwrap().as_str()
         };
         assert_eq!(x, expected);
     }
