@@ -8,15 +8,15 @@ pub struct Function {
     body : Statement
 }
 pub struct Statement {
-    return_exp: Return
+    pub(crate) return_exp: Return
 }
 
 pub struct Return {
-    expression: Expression
+    pub(crate) expression: Expression
 }
 
 pub struct Expression {
-    constant: Constant
+    pub(crate) constant: Constant
 }
 pub struct Constant {
     pub(crate) value: i32
