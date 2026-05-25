@@ -1,11 +1,11 @@
 
 pub struct Program {
-    function: Function
+    pub(crate) function: Function
 }
 
 pub struct Function {
-    identifier: String,
-    body : Statement
+    pub(crate) identifier: String,
+    pub(crate) body : Statement
 }
 pub struct Statement {
     pub(crate) return_exp: Return

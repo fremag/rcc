@@ -40,7 +40,7 @@ fn main() -> Result<(), std::io::Error> {
     let contents = fs::read_to_string(&output_file)
          .expect(&format!("Should have been able to read the file {}", output_file_str));
     let lexer  = Lexer::new(contents);
-    let tokens = match lexer.tokenize()  {
+    let mut tokens = match lexer.tokenize()  {
         Err(err_msg) => {
             print!("{err_msg}");
             process::exit(1);
@@ -54,15 +54,13 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     if action == "--lex" {
-        // we only want to lex so let's exit here  
+        // we only want to lex so let's exit here
         process::exit(0);
     }
 
-    let parser = Parser {
+    let parser = Parser::new();
 
-    };
-
-    let program = parser.parse_program(&tokens);
+    let _program = parser.parse_program(&mut tokens);
 
     println!("Done.");
     process::exit(0);
