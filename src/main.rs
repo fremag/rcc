@@ -1,11 +1,14 @@
 pub mod lexer;
+pub mod parser;
+pub mod ast_modele;
 
 use std::env;
-use crate::lexer::Lexer;
 use std::fs;
 use std::process;
 use std::process::Command;
 use std::path::{Path, PathBuf};
+use crate::lexer::Lexer;
+use crate::parser::Parser;
 
 fn compute_output_file(input_file: &str) -> PathBuf {
     let mut output_file = PathBuf::from(input_file);
@@ -35,7 +38,7 @@ fn main() -> Result<(), std::io::Error> {
     println!("{output}");
 
     let contents = fs::read_to_string(&output_file)
-         .expect(&format!("Should have been able to read the file {}", &output_file_str));
+         .expect(&format!("Should have been able to read the file {}", output_file_str));
     let lexer  = Lexer::new(contents);
     let tokens = match lexer.tokenize()  {
         Err(err_msg) => {
@@ -46,7 +49,7 @@ fn main() -> Result<(), std::io::Error> {
     };
 
     println!("Tokens:");
-    for token in tokens {
+    for token in &tokens {
         println!("{token}");
     }
 
@@ -54,7 +57,13 @@ fn main() -> Result<(), std::io::Error> {
         // we only want to lex so let's exit here  
         process::exit(0);
     }
-    
+
+    let parser = Parser {
+
+    };
+
+    let program = parser.parse_program(&tokens);
+
     println!("Done.");
     process::exit(0);
 }
