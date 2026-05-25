@@ -69,13 +69,14 @@ fn main() -> Result<(), std::io::Error> {
         process::exit(1);
     }
 
+    let program = program_result.unwrap();
+    print!("{program:?}");
+
     if action == "--parse" {
         // we only want to lex so let's exit here
         process::exit(0);
     }
 
-    let program = program_result.unwrap();
-    print!("{program:?}");
     println!("Done.");
     process::exit(0);
 }
