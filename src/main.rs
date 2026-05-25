@@ -60,8 +60,22 @@ fn main() -> Result<(), std::io::Error> {
 
     let parser = Parser::new();
 
-    let _program = parser.parse_program(&mut tokens);
+    let program_result = parser.parse_program(&mut tokens);
+    if let Err(_) = program_result  {
+        process::exit(1);
+    }
 
+    if tokens.len() != 0 {
+        process::exit(1);
+    }
+
+    if action == "--parse" {
+        // we only want to lex so let's exit here
+        process::exit(0);
+    }
+
+    let program = program_result.unwrap();
+    print!("{program:?}");
     println!("Done.");
     process::exit(0);
 }
