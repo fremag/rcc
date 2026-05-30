@@ -79,6 +79,11 @@ fn main() -> Result<(), std::io::Error> {
         process::exit(0);
     }
 
+    let program_asm = program.to_asm();
+    print!("Ok");
+    print!("{program_asm:?}");
+    print!("done");
+
     if action == "--codegen" {
 
         // we only want to generate code, so let's exit here
