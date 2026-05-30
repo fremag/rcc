@@ -1,6 +1,7 @@
 pub mod lexer;
 pub mod parser;
-pub mod ast_modele;
+pub mod ast_model;
+pub mod asm_constructs;
 
 use std::env;
 use std::fs;
@@ -48,12 +49,13 @@ fn main() -> Result<(), std::io::Error> {
         Ok(tokens) => tokens
     };
 
-    println!("Tokens:");
-    for token in &tokens {
-        println!("{token}");
-    }
-
     if action == "--lex" {
+
+        println!("Tokens:");
+        for token in &tokens {
+            println!("{token}");
+        }
+
         // we only want to lex so let's exit here
         process::exit(0);
     }
@@ -70,10 +72,16 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     let program = program_result.unwrap();
-    print!("{program:?}");
-
     if action == "--parse" {
-        // we only want to lex so let's exit here
+        print!("{program:?}");
+
+        // we only want to parse, so let's exit here
+        process::exit(0);
+    }
+
+    if action == "--codegen" {
+
+        // we only want to generate code, so let's exit here
         process::exit(0);
     }
 

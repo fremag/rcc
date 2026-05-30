@@ -1,4 +1,4 @@
-use crate::ast_modele::{Constant, Expression, Function, Program, Return, Statement};
+use crate::ast_model::{Constant, Expression, Function, Program, Return, Statement};
 use crate::lexer::Lexer;
 
 pub struct Parser {
