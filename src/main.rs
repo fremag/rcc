@@ -11,9 +11,9 @@ use std::path::{Path, PathBuf};
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 
-fn compute_output_file(input_file: &str) -> PathBuf {
+fn change_extension(input_file: &str, extension : &str) -> PathBuf {
     let mut output_file = PathBuf::from(input_file);
-    output_file.set_extension("i");
+    output_file.set_extension(extension);
     output_file
 }
 
@@ -23,12 +23,22 @@ fn run_preprocessor(gcc_path: &str, input_file: &str, output_file: &Path) -> std
         .output()
 }
 
+fn run_codegen(gcc_path: &str, asm_file: &str, output_file: &Path) -> std::io::Result<process::Output> {
+    Command::new(gcc_path)
+        .args([asm_file, "-o", output_file.to_str().unwrap()])
+        .output()
+}
+
 fn main() -> Result<(), std::io::Error> {
     let args: Vec<String> = env::args().collect();
-    let action = &args[1];
-    let input_file = &args[2];
 
-    let output_file = compute_output_file(input_file);
+    let mut action = &String::from("all");
+    let mut input_file = &args[1];
+    if &args.len() > &2 {
+        action = &args[1];
+        input_file = &args[2];
+    }
+    let output_file = change_extension(input_file, "i");
     let output_file_str = output_file.to_str().unwrap();
 
     println!("{input_file} => {output_file_str}");
@@ -80,15 +90,24 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     let program_asm = program.to_asm();
-    print!("Ok");
-    print!("{program_asm:?}");
-    print!("done");
 
     if action == "--codegen" {
+        print!("{program_asm:?}");
 
         // we only want to generate code, so let's exit here
         process::exit(0);
     }
+
+    let asm_code = program_asm.to_code();
+    println!("{asm_code}");
+    
+    let asm_file = change_extension(input_file, "s");
+    fs::write(asm_file, asm_code).expect("Should have been able to write the file");
+    let exe_file = change_extension(input_file, "");
+    let command = run_codegen("/usr/bin/gcc", input_file, &exe_file)
+        .expect("failed to execute process");
+    let output = String::from_utf8_lossy(&command.stdout);
+    println!("{output}");
 
     println!("Done.");
     process::exit(0);
@@ -100,25 +119,25 @@ mod tests {
 
     #[test]
     fn compute_output_file_replaces_c_extension() {
-        let out = compute_output_file("foo.c");
+        let out = change_extension("foo.c", "i");
         assert_eq!(out, PathBuf::from("foo.i"));
     }
 
     #[test]
     fn compute_output_file_replaces_other_extension() {
-        let out = compute_output_file("path/to/source.cpp");
+        let out = change_extension("path/to/source.cpp","i");
         assert_eq!(out, PathBuf::from("path/to/source.i"));
     }
 
     #[test]
     fn compute_output_file_adds_extension_when_missing() {
-        let out = compute_output_file("Makefile");
+        let out = change_extension("Makefile", "i");
         assert_eq!(out, PathBuf::from("Makefile.i"));
     }
 
     #[test]
     fn compute_output_file_preserves_directory() {
-        let out = compute_output_file("/tmp/dir/program.c");
+        let out = change_extension("/tmp/dir/program.c", "i");
         assert_eq!(out, PathBuf::from("/tmp/dir/program.i"));
     }
 
