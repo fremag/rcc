@@ -44,12 +44,16 @@ impl Lexer {
     pub fn kw_semi_colon_regex() -> regex::Regex {
         regex::Regex::new(r"^(?<item>;)").unwrap()
     }
+    pub fn kw_bitwise_complement_op_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>~)").unwrap() }
+    pub fn kw_negation_op_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>-)").unwrap() }
+    pub fn kw_two_dec_op_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>--)").unwrap() }
+
 
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
             return Err("Input is empty".to_string());
         }
-        let regexes = vec![ Lexer::identifier_regex(), Lexer::constant_regex(), Lexer::kw_int_regex(), Lexer::kw_void_regex(), Lexer::kw_return_regex(), Lexer::kw_open_par_regex(), Lexer::kw_close_par_regex(), Lexer::kw_open_brace_regex(), Lexer::kw_close_brace_regex(), Lexer::kw_semi_colon_regex()];
+        let regexes = vec![ Lexer::identifier_regex(), Lexer::constant_regex(), Lexer::kw_int_regex(), Lexer::kw_void_regex(), Lexer::kw_return_regex(), Lexer::kw_open_par_regex(), Lexer::kw_close_par_regex(), Lexer::kw_open_brace_regex(), Lexer::kw_close_brace_regex(), Lexer::kw_semi_colon_regex(), Lexer::kw_bitwise_complement_op_regex(), Lexer::kw_negation_op_regex(), Lexer::kw_two_dec_op_regex()];
         let mut tokens = Vec::new();
         let mut i = 0;
 
@@ -229,4 +233,50 @@ mod tests {
         let tokens = lexer.tokenize().unwrap();
         assert_eq!(tokens, vec!["int", "f", "(", ")", "{", "return", "5", ";", "}", ";"]);
     }
+
+    #[test]
+    fn tokenize_test_tokens() {
+        let lexer = Lexer::new("int main(void) {    return ~(2);}".to_string());
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens, vec!["int", "main", "(", "void", ")", "{", "return", "~", "(", "2", ")", ";", "}"]);
+    }
+
+
+    #[test_case("a", "~", "~")]
+    #[test_case("b", "~~", "~")]
+    #[test_case("c", "int f() { return 5; };", "xxx")]
+    fn bitwise_complement_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bitwise_complement_op_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) =>  caps.name("item").unwrap().as_str()
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "-", "-")]
+    #[test_case("b", "--", "-")]
+    #[test_case("c", "int f() { return 5; };", "xxx")]
+    fn negation_op_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_negation_op_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) =>  caps.name("item").unwrap().as_str()
+        };
+        assert_eq!(x, expected);
+    }
+
+
+    #[test_case("a", "-", "xxx")]
+    #[test_case("b", "--", "--")]
+    #[test_case("c", "int f() { return 5; };", "xxx")]
+    fn two_dec_op_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_two_dec_op_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) =>  caps.name("item").unwrap().as_str()
+        };
+        assert_eq!(x, expected);
+    }
+
 }
