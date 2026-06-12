@@ -63,13 +63,15 @@ impl Return {
 }
 
 #[derive(Debug)]
-pub struct Expression {
-    pub(crate) constant: Constant
+pub enum Expression {
+    Constant(Constant)
 }
 
 impl Expression {
     pub fn to_asm(&self) -> Box<dyn Operand> {
-        Box::new(Imm { value: self.constant.value })
+        match self {
+            Expression::Constant(cst) => Box::new(Imm { value: cst.value })
+        }
     }
 }
 

@@ -33,7 +33,7 @@ impl Parser {
 
     pub(crate) fn parse_expression(&self, tokens: &mut Vec<String>) -> Result<Expression, String> {
         if let Ok(constant) = self.parse_constant(tokens) {
-            Ok(Expression {constant})
+            Ok(Expression::Constant(constant))
         } else {
             Err("Invalid expression".to_string())
         }
@@ -163,7 +163,12 @@ mod tests {
 
         let expression = parser.parse_expression(&mut tokens);
         assert_eq!(expression.is_ok(), true);
-        assert_eq!(expression.unwrap().constant.value, 123);
+        match expression.unwrap() {
+            Expression::Constant(cst) => {
+                assert_eq!(cst.value, 123);
+                return;
+            }
+        }
     }
 
     #[test]
@@ -180,7 +185,12 @@ mod tests {
         let mut tokens = vec![ "return".to_string(), "123".to_string(), ";".to_string()];
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), true);
-        assert_eq!(result.unwrap().expression.constant.value, 123);
+        match result.unwrap().expression {
+            Expression::Constant(cst) => {
+                assert_eq!(cst.value, 123);
+                return;
+            }
+        }
     }
 
     #[test]
@@ -213,7 +223,12 @@ mod tests {
         let mut tokens = vec![ "return".to_string(), "123".to_string(), ";".to_string()];
         let result = parser.parse_statement(&mut tokens);
         assert_eq!(result.is_ok(), true);
-        assert_eq!(result.unwrap().return_exp.expression.constant.value, 123);
+        match result.unwrap().return_exp.expression {
+            Expression::Constant(cst) => {
+                assert_eq!(cst.value, 123);
+                return;
+            }
+        }
     }
 
     #[test]
@@ -225,7 +240,12 @@ mod tests {
         let result = parser.parse_function(&mut tokens);
         assert_eq!(result.is_ok(), true);
         let function = result.unwrap();
-        assert_eq!(function.body.return_exp.expression.constant.value, 2);
+        let expression = function.body.return_exp.expression;
+        match expression { 
+            Expression::Constant(cst) => {
+                assert_eq!(cst.value, 2);
+            } 
+        }
         assert_eq!(function.identifier, "main".to_string());
     }
     
@@ -238,7 +258,13 @@ mod tests {
         let result = parser.parse_program(&mut tokens);
         assert_eq!(result.is_ok(), true);
         let function = result.unwrap();
-        assert_eq!(function.function.body.return_exp.expression.constant.value, 2);
+        let expression = function.function.body.return_exp.expression;
+        match expression { 
+            Expression::Constant(cst) => {
+                assert_eq!(cst.value, 2);
+            } 
+        }
+        
         assert_eq!(function.function.identifier, "main".to_string());
     }
 }
