@@ -1,4 +1,4 @@
-use crate::ast_model::{Constant, Expression, Function, Program, Return, Statement};
+use crate::ast_model::{Constant, Expression, Function, Program, Return, Statement, UnaryOp};
 use crate::lexer::Lexer;
 
 pub struct Parser {
@@ -22,8 +22,9 @@ impl Parser {
         if tokens.len() == 0 {
             Err("Empty token list".to_string())
         } else {
-            let cst = tokens.remove(0);
-            if let Ok(value) = cst.parse::<i32>() {
+            let token = tokens.get(0).unwrap();
+            if let Ok(value) = token.parse::<i32>() {
+                tokens.remove(0);
                 Ok(Constant{value})
             } else {
                 Err("Invalid constant".to_string())
@@ -34,8 +35,39 @@ impl Parser {
     pub(crate) fn parse_expression(&self, tokens: &mut Vec<String>) -> Result<Expression, String> {
         if let Ok(constant) = self.parse_constant(tokens) {
             Ok(Expression::Constant(constant))
+        } else if tokens[0] == "~" || tokens[0] == "-" {
+            if let Ok(op) = self.parse_unop(tokens) {
+                if let Ok(exp) = self.parse_expression(tokens) {
+                    Ok(Expression::Unary(op, Box::new(exp)))
+                } else {
+                    Err("Invalid unary operator".to_string())
+                }
+            } else {
+                Err("Invalid expression".to_string())
+            }
+        } else if tokens[0] == "(" {
+            tokens.remove(0);
+            if let Ok(inner_exp) = self.parse_expression(tokens) {
+                let token = tokens.remove(0);
+                if token != ")" {
+                    Err("Invalid expression".to_string())
+                } else {
+                    Ok(inner_exp)
+                }
+            } else {
+                Err("Invalid expression".to_string())
+            }
         } else {
             Err("Invalid expression".to_string())
+        }
+    }
+
+    pub(crate) fn parse_unop(&self, tokens: &mut Vec<String>) -> Result<UnaryOp, String> {
+        let token = tokens.remove(0);
+        match token.as_str() {
+            "~" => Ok(UnaryOp::BitwiseComplement),
+            "-" => Ok(UnaryOp::Negate),
+            _ => Err(format!("Invalid unary operator: {}", &token))
         }
     }
 
@@ -157,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expression_parser() {
+    fn test_constant_expression_parser() {
         let parser = Parser::new();
         let mut tokens = vec![ "123".to_string()];
 
@@ -168,6 +200,71 @@ mod tests {
                 assert_eq!(cst.value, 123);
                 return;
             }
+            _ => panic!("Invalid expression")
+        }
+    }
+
+    #[test]
+    fn test_unary_expression_parser() {
+        let parser = Parser::new();
+        let mut tokens = vec![ "~".to_string(), "123".to_string()];
+
+        let expression = parser.parse_expression(&mut tokens);
+        assert_eq!(expression.is_ok(), true);
+        if let Expression::Unary(op, exp) = expression.unwrap() {
+            assert_eq!(op, UnaryOp::BitwiseComplement);
+            match exp.as_ref() {
+                Expression::Constant(cst) => {
+                    assert_eq!(cst.value, 123);
+                },
+                _ => panic!("Invalid expression")
+            }
+
+            return;
+        } else {
+            panic!("Invalid expression")
+        }
+    }
+
+    #[test]
+    fn test_unary_negate_parser() {
+        let parser = Parser::new();
+        let mut tokens = vec![ "-".to_string(), "123".to_string()];
+
+        let expression = parser.parse_expression(&mut tokens);
+        assert_eq!(expression.is_ok(), true);
+        if let Expression::Unary(op, exp) = expression.unwrap() {
+            assert_eq!(op, UnaryOp::Negate);
+            match exp.as_ref() {
+                Expression::Constant(cst) => {
+                    assert_eq!(cst.value, 123);
+                },
+                _ => panic!("Invalid expression")
+            }
+
+            return;
+        } else {
+            panic!("Invalid expression")
+        }
+    }
+
+    #[test]
+    fn test_multi_unary_negate_parser() {
+        let parser = Parser::new();
+        let mut tokens = vec![ "-".to_string(),"(".to_string(),"~".to_string(), "123".to_string(), ")".to_string()];
+
+        let expression = parser.parse_expression(&mut tokens);
+        if let Ok(exp1) = expression
+            && let Expression::Unary(negate1, sub_exp) = exp1
+            && let Expression::Unary(bitwise_complement, sub_exp2) = sub_exp.as_ref()
+            && let Expression::Constant(cst) = sub_exp2.as_ref()
+        {
+            assert_eq!(negate1, UnaryOp::Negate);
+            assert_eq!(*bitwise_complement, UnaryOp::BitwiseComplement);
+            assert_eq!(cst.value, 123);
+
+            assert_eq!(cst.value, 123);
+            return;
         }
     }
 
@@ -190,6 +287,7 @@ mod tests {
                 assert_eq!(cst.value, 123);
                 return;
             }
+            _ => panic!("Invalid expression")
         }
     }
 
@@ -228,6 +326,7 @@ mod tests {
                 assert_eq!(cst.value, 123);
                 return;
             }
+            _ => panic!("Invalid expression")
         }
     }
 
@@ -241,10 +340,11 @@ mod tests {
         assert_eq!(result.is_ok(), true);
         let function = result.unwrap();
         let expression = function.body.return_exp.expression;
-        match expression { 
+        match expression {
             Expression::Constant(cst) => {
                 assert_eq!(cst.value, 2);
-            } 
+            }
+            _ => panic!("Invalid expression")
         }
         assert_eq!(function.identifier, "main".to_string());
     }
@@ -259,12 +359,13 @@ mod tests {
         assert_eq!(result.is_ok(), true);
         let function = result.unwrap();
         let expression = function.function.body.return_exp.expression;
-        match expression { 
+        match expression {
             Expression::Constant(cst) => {
                 assert_eq!(cst.value, 2);
-            } 
+            },
+            Expression::Unary(_, _) => todo!()
         }
-        
+
         assert_eq!(function.function.identifier, "main".to_string());
     }
 }

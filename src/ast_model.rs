@@ -62,20 +62,44 @@ impl Return {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
-    Constant(Constant)
+    Constant(Constant),
+    Unary(UnaryOp, Box<Expression>)
+}
+
+#[derive(Debug)]
+struct UnaryOperand {
+    pub(crate) op: UnaryOp,
+    pub(crate) exp: Box<Expression>
+}
+
+impl Operand for UnaryOperand {
+    fn to_code(&self) -> String {
+        todo!()
+    }
 }
 
 impl Expression {
     pub fn to_asm(&self) -> Box<dyn Operand> {
         match self {
-            Expression::Constant(cst) => Box::new(Imm { value: cst.value })
+            Expression::Constant(cst) => Box::new(Imm { value: cst.value }),
+            Expression::Unary(op, exp) => {
+                Box::new(UnaryOperand {
+                    op: op.clone(),
+                    exp: exp.clone(),
+                })
+            }
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum UnaryOp {
+    Negate, BitwiseComplement
+}
+
+#[derive(Debug, Clone)]
 pub struct Constant {
     pub(crate) value: i32
 }
