@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug };
 use crate::asm_constructs::instruction::Instruction;
 use crate::asm_constructs::operand::Operand;
 

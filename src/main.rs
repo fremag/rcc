@@ -90,6 +90,7 @@ fn main() -> Result<(), std::io::Error> {
         process::exit(0);
     }
 
+    
     if action == "--tacky" {
         // we only want to parse, so let's exit here
         process::exit(0);
