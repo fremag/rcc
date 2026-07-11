@@ -1,7 +1,6 @@
-use std::fmt;
-use std::fmt::Formatter;
 use crate::asm_constructs::instruction::Instruction;
 
+#[derive(Debug)]
 pub struct FunctionDefinition {
     pub(crate) identifier: String,
     pub(crate) instructions : Vec<Box<dyn Instruction>>
@@ -16,14 +15,5 @@ impl FunctionDefinition {
         }
 
         asm_code
-    }
-}
-
-impl fmt::Debug for FunctionDefinition {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FunctionDefinition")
-            .field("identifier", &self.identifier)
-            .field("instructions", &self.instructions)
-            .finish()
     }
 }
