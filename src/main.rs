@@ -2,6 +2,7 @@ pub mod lexer;
 pub mod parser;
 pub mod ast_model;
 pub mod asm_constructs;
+mod tacky;
 
 use std::env;
 use std::fs;
@@ -85,6 +86,11 @@ fn main() -> Result<(), std::io::Error> {
     if action == "--parse" {
         print!("{program:?}");
 
+        // we only want to parse, so let's exit here
+        process::exit(0);
+    }
+
+    if action == "--tacky" {
         // we only want to parse, so let's exit here
         process::exit(0);
     }

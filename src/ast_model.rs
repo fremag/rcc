@@ -1,11 +1,11 @@
 use crate::asm_constructs::{AsmProgram, AsmReturn, FunctionDefinition, Imm, Instruction, Mov, Operand, Register};
 
 #[derive(Debug)]
-pub struct Program {
-    pub(crate) function: Function
+pub struct AstProgram {
+    pub(crate) function: AstFunction
 }
 
-impl Program {
+impl AstProgram {
     pub fn to_asm(&self) -> AsmProgram {
         AsmProgram{
             function_definition: self.function.to_asm(),
@@ -13,12 +13,12 @@ impl Program {
     }
 }
 #[derive(Debug)]
-pub struct Function {
+pub struct AstFunction {
     pub(crate) identifier: String,
-    pub(crate) body : Statement
+    pub(crate) body : AstStatement
 }
 
-impl Function {
+impl AstFunction {
     pub(crate) fn to_asm(&self) -> FunctionDefinition {
         FunctionDefinition {
             identifier: self.identifier.clone(),
@@ -28,11 +28,11 @@ impl Function {
 }
 
 #[derive(Debug)]
-pub struct Statement {
-    pub(crate) return_exp: Return
+pub struct AstStatement {
+    pub(crate) return_exp: AstReturn
 }
 
-impl Statement {
+impl AstStatement {
     pub(crate) fn to_asm(&self) -> Vec<Box<dyn Instruction>> {
         let mut instructions = Vec::new();
         let exp_instructions = self.return_exp.to_asm();
@@ -44,11 +44,11 @@ impl Statement {
 }
 
 #[derive(Debug)]
-pub struct Return {
-    pub(crate) expression: Expression
+pub struct AstReturn {
+    pub(crate) expression: AstExpression
 }
 
-impl Return {
+impl AstReturn {
     pub(crate) fn to_asm(&self) -> Vec<Box<dyn Instruction>> {
         let mut instructions : Vec<Box<dyn Instruction>> = Vec::new();
         let mov = Mov{
@@ -63,29 +63,29 @@ impl Return {
 }
 
 #[derive(Debug, Clone)]
-pub enum Expression {
-    Constant(Constant),
-    Unary(UnaryOp, Box<Expression>)
+pub enum AstExpression {
+    Constant(AstConstant),
+    Unary(AstUnaryOp, Box<AstExpression>)
 }
 
 #[derive(Debug)]
-struct UnaryOperand {
-    pub(crate) op: UnaryOp,
-    pub(crate) exp: Box<Expression>
+struct AstUnaryOperand {
+    pub(crate) op: AstUnaryOp,
+    pub(crate) exp: Box<AstExpression>
 }
 
-impl Operand for UnaryOperand {
+impl Operand for AstUnaryOperand {
     fn to_code(&self) -> String {
         todo!()
     }
 }
 
-impl Expression {
+impl AstExpression {
     pub fn to_asm(&self) -> Box<dyn Operand> {
         match self {
-            Expression::Constant(cst) => Box::new(Imm { value: cst.value }),
-            Expression::Unary(op, exp) => {
-                Box::new(UnaryOperand {
+            AstExpression::Constant(cst) => Box::new(Imm { value: cst.value }),
+            AstExpression::Unary(op, exp) => {
+                Box::new(AstUnaryOperand {
                     op: op.clone(),
                     exp: exp.clone(),
                 })
@@ -95,11 +95,11 @@ impl Expression {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum UnaryOp {
+pub enum AstUnaryOp {
     Negate, BitwiseComplement
 }
 
 #[derive(Debug, Clone)]
-pub struct Constant {
+pub struct AstConstant {
     pub(crate) value: i32
 }
