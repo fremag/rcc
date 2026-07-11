@@ -1,4 +1,10 @@
-use crate::ast_model::{AstConstant, AstExpression, AstFunction, AstProgram, AstReturn, AstStatement, AstUnaryOp};
+use crate::ast_model::ast_return::AstReturn;
+use crate::ast_model::constant::AstConstant;
+use crate::ast_model::expression::AstExpression;
+use crate::ast_model::function::AstFunction;
+use crate::ast_model::program::AstProgram;
+use crate::ast_model::statement::AstStatement;
+use crate::ast_model::unary::AstUnaryOp;
 use crate::lexer::Lexer;
 
 pub struct Parser {
