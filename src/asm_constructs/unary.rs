@@ -8,9 +8,15 @@ pub enum UnaryOperator {
 }
 
 #[derive(Debug)]
-struct Unary {
+pub struct Unary {
     unary_operator: UnaryOperator,
     operand: Box<dyn Operand>
+}
+
+impl Unary {
+    pub fn new(unary_operator: UnaryOperator, operand: Box<dyn Operand>) -> Self {
+        Self { unary_operator, operand }
+    }
 }
 
 impl Instruction for Unary {

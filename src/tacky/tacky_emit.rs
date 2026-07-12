@@ -1,3 +1,4 @@
+use crate::asm_constructs;
 use crate::asm_constructs::function::FunctionDefinition;
 use crate::asm_constructs::imm::Imm;
 use crate::asm_constructs::instruction::Instruction;
@@ -7,6 +8,7 @@ use crate::asm_constructs::program::AsmProgram;
 use crate::asm_constructs::pseudo::Pseudo;
 use crate::asm_constructs::register::{Reg, Register};
 use crate::asm_constructs::ret::Ret;
+use crate::asm_constructs::unary::UnaryOperator;
 use crate::ast_model::ast_return::AstReturn;
 use crate::ast_model::expression::AstExpression;
 use crate::ast_model::function::AstFunction;
@@ -49,6 +51,13 @@ impl TackyEmit {
         }
     }
 
+    fn convert_asm_unop(ast_unary_op: &TackyUnaryOp) -> UnaryOperator {
+        match ast_unary_op {
+            TackyUnaryOp::Negate => UnaryOperator::Neg,
+            TackyUnaryOp::Complement => UnaryOperator::Not
+        }
+    }
+
     fn make_temporary(&mut self) -> String {
         let tmp = String::from("tmp.") + &self.tmp_var_count.to_string();
         self.tmp_var_count+=1;
@@ -88,12 +97,21 @@ impl TackyEmit {
         for tacky_instruction in &function.body {
             if let TackyInstruction::Return(val) = tacky_instruction {
                 let src= self.value_to_asm(&val);
-                let dest= Register {reg : Reg::AX };
+                let dest = Register {reg : Reg::AX };
                 let mov = Mov {src, dest: Box::new(dest)};
                 instructions.push(Box::new(mov));
                 instructions.push(Box::new(Ret{}));
             } else if let TackyInstruction::Unary(op, src, dst) = tacky_instruction {
-                unreachable!()
+                let src= self.value_to_asm(&src);
+                let dest= self.value_to_asm(&dst);
+                let mov = Mov {src, dest};
+                instructions.push(Box::new(mov));
+
+                let unary_operator = Self::convert_asm_unop(op);
+                let dest2= self.value_to_asm(&dst);
+                let unary = asm_constructs::unary::Unary::new(unary_operator, dest2);
+                instructions.push(Box::new(unary));
+
             } else {
                 unreachable!()
             };
@@ -240,6 +258,7 @@ mod tests {
         let result2 = TackyEmit::convert_unop(&BitwiseComplement);
         assert_eq!(result2, TackyUnaryOp::Complement);
     }
+
     #[test]
     pub fn test_emit_function() {
         let mut emit = TackyEmit::new();
@@ -288,7 +307,7 @@ mod tests {
 
         let instruction = result.function_def.body.get(0).unwrap();
         if let TackyInstruction::Return(val) = instruction {
-            assert_eq!(val, &TackyVal::Constant(3));
+            assert_eq!(val, &Constant(3));
         } else {
             panic!();
         }
