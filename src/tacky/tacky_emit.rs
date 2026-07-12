@@ -1,15 +1,29 @@
+use crate::asm_constructs::function::FunctionDefinition;
+use crate::asm_constructs::imm::Imm;
+use crate::asm_constructs::instruction::Instruction;
+use crate::asm_constructs::mov::Mov;
+use crate::asm_constructs::operand::Operand;
+use crate::asm_constructs::program::AsmProgram;
+use crate::asm_constructs::pseudo::Pseudo;
+use crate::asm_constructs::register::{Reg, Register};
+use crate::asm_constructs::ret::Ret;
 use crate::ast_model::ast_return::AstReturn;
 use crate::ast_model::expression::AstExpression;
 use crate::ast_model::function::AstFunction;
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::unary::AstUnaryOp;
 use crate::tacky::{TackyFunction, TackyInstruction, TackyProgram, TackyUnaryOp, TackyVal};
+use crate::tacky::TackyVal::Constant;
 
 pub struct TackyEmit {
     tmp_var_count : i32
 }
 
 impl TackyEmit {
+    pub(crate) fn new() -> Self {
+        Self { tmp_var_count: 0 }
+    }
+
     pub fn emit_expression(&mut self, expression: &AstExpression, instructions: &mut Vec<TackyInstruction>) -> TackyVal {
         match expression {
             AstExpression::Constant(cst) => {
@@ -60,6 +74,46 @@ impl TackyEmit {
             body: instructions
         }
     }
+
+    pub fn to_asm(&mut self, program: &TackyProgram) -> AsmProgram {
+        let function_definition = self.function_to_asm(&program.function_def);
+
+        AsmProgram {
+            function_definition,
+        }
+    }
+
+    pub fn function_to_asm(&mut self, function: &TackyFunction) -> FunctionDefinition {
+        let mut instructions : Vec<Box< dyn Instruction>> = Vec::new();
+        for tacky_instruction in &function.body {
+            if let TackyInstruction::Return(val) = tacky_instruction {
+                let src= self.value_to_asm(&val);
+                let dest= Register {reg : Reg::AX };
+                let mov = Mov {src, dest: Box::new(dest)};
+                instructions.push(Box::new(mov));
+                instructions.push(Box::new(Ret{}));
+            } else if let TackyInstruction::Unary(op, src, dst) = tacky_instruction {
+                unreachable!()
+            } else {
+                unreachable!()
+            };
+
+        }
+        FunctionDefinition {
+            identifier: function.identifier.clone(),
+            instructions,
+        }
+    }
+
+    fn value_to_asm(&self, tacky_val: &TackyVal) -> Box<dyn Operand> {
+        if let Constant(value) = tacky_val {
+            Box::new(Imm { value: *value })
+        } else if let TackyVal::Var(name) = tacky_val {
+            Box::new(Pseudo { identifier: name.clone() })
+        } else {
+            unreachable!();
+        }
+    }
 }
 
 #[cfg(test)]
@@ -71,7 +125,7 @@ mod tests {
 
     #[test]
     pub fn test_emit_expression_constant() {
-        let mut emit = TackyEmit{tmp_var_count:0};
+        let mut emit = TackyEmit::new();
         let ast_exp = AstExpression::Constant {
             0: AstConstant { value: 3},
         };
@@ -84,7 +138,8 @@ mod tests {
 
     #[test]
     pub fn test_emit_expression_unary() {
-        let mut emit = TackyEmit{tmp_var_count:0};
+        let mut emit = TackyEmit::new();
+
         let ast_exp = AstExpression::Unary {
             0: Negate,
             1: Box::new(AstExpression::Constant {
@@ -108,7 +163,8 @@ mod tests {
 
     #[test]
     pub fn test_emit_return() {
-        let mut emit = TackyEmit{tmp_var_count:0};
+        let mut emit = TackyEmit::new();
+
         let ast_return = AstReturn {
             expression: AstExpression::Constant {
                 0: AstConstant { value: 3},
@@ -128,7 +184,8 @@ mod tests {
 
     #[test]
     pub fn test_emit_return_double_unary() {
-        let mut emit = TackyEmit{tmp_var_count:0};
+        let mut emit = TackyEmit::new();
+
         let ast_return = AstReturn {
             expression: AstExpression::Unary {
                 0: Negate,
@@ -142,8 +199,14 @@ mod tests {
         };
         let mut instructions : Vec<TackyInstruction> = Vec::new();
         emit.emit_return(&ast_return, &mut instructions);
-        assert_eq!(instructions.len(), 2);
+        assert_eq!(instructions.len(), 3);
         let instruction = instructions.get(0).unwrap();
+        if let TackyInstruction::Unary(op, src, dst) = instruction {
+            assert_eq!(op, &TackyUnaryOp::Complement);
+            assert_eq!(src, &TackyVal::Constant(3));
+            assert_eq!(dst, &TackyVal::Var(String::from("tmp.0")));
+        }
+        let instruction = instructions.get(1).unwrap();
         if let TackyInstruction::Unary(op, src, dst) = instruction {
             assert_eq!(op, &TackyUnaryOp::Negate);
             assert_eq!(src, &TackyVal::Var(String::from("tmp.0")));
@@ -151,17 +214,18 @@ mod tests {
         } else {
             panic!();
         }
-        let instruction = instructions.get(1).unwrap();
-        if let TackyInstruction::Unary(op, src, dst) = instruction {
-            assert_eq!(op, &TackyUnaryOp::Complement);
-            assert_eq!(src, &TackyVal::Var(String::from("tmp.1")));
-            assert_eq!(dst, &TackyVal::Var(String::from("tmp.")));
+        let instruction = instructions.get(2).unwrap();
+        if let TackyInstruction::Return(val) = instruction {
+            assert_eq!(val, &TackyVal::Var(String::from("tmp.1")));
+        } else {
+            panic!();
         }
     }
 
     #[test]
     pub fn test_make_temporary() {
-        let mut emit = TackyEmit{tmp_var_count:0};
+        let mut emit = TackyEmit::new();
+
         let result = emit.make_temporary();
         assert_eq!(result, String::from("tmp.0"));
         let result2 = emit.make_temporary();
@@ -178,7 +242,8 @@ mod tests {
     }
     #[test]
     pub fn test_emit_function() {
-        let mut emit = TackyEmit{tmp_var_count:0};
+        let mut emit = TackyEmit::new();
+
         let function = AstFunction {
             identifier: "main".to_string(),
             body: AstStatement {
@@ -203,7 +268,7 @@ mod tests {
 
     #[test]
     pub fn test_emit_program() {
-        let mut emit = TackyEmit{tmp_var_count:0};
+        let mut emit = TackyEmit::new();
         let program = AstProgram {
             function: AstFunction {
                 identifier: "main".to_string(),

@@ -82,21 +82,22 @@ fn main() -> Result<(), std::io::Error> {
         process::exit(1);
     }
 
-    let program = program_result.unwrap();
+    let ast_program = program_result.unwrap();
     if action == "--parse" {
-        print!("{program:?}");
+        print!("{ast_program:?}");
 
         // we only want to parse, so let's exit here
         process::exit(0);
     }
 
-    
+    let mut emit = crate::tacky::tacky_emit::TackyEmit::new();
+    let tacky_program = emit.emit_program(&ast_program);
     if action == "--tacky" {
         // we only want to parse, so let's exit here
         process::exit(0);
     }
 
-    let program_asm = program.to_asm();
+    let program_asm = emit.to_asm(&tacky_program);
 
     if action == "--codegen" {
         print!("{program_asm:?}");

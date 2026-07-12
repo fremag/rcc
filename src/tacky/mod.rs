@@ -1,4 +1,4 @@
-mod tacky_emit;
+pub(crate) mod tacky_emit;
 
 pub struct TackyProgram {
     pub(crate) function_def : TackyFunction

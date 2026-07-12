@@ -8,6 +8,6 @@ pub mod operand;
 pub mod register;
 pub mod unary;
 pub mod allocate_stack;
-mod pseudo;
-mod stack;
+pub mod pseudo;
+pub mod stack;
 
