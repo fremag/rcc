@@ -20,6 +20,7 @@ pub enum TackyVal {
     Var(String)
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum TackyUnaryOp {
     Complement,
     Negate

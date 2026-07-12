@@ -61,3 +61,129 @@ impl TackyEmit {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::ast_model::constant::AstConstant;
+    use crate::ast_model::statement::AstStatement;
+    use crate::ast_model::unary::AstUnaryOp::{BitwiseComplement, Negate};
+    use super::*;
+
+    #[test]
+    pub fn test_emit_expression_constant() {
+        let mut emit = TackyEmit{tmp_var_count:0};
+        let ast_exp = AstExpression::Constant {
+            0: AstConstant { value: 3},
+        };
+        let mut instructions : Vec<TackyInstruction> = Vec::new();
+        let result = emit.emit_expression(&ast_exp, &mut instructions);
+
+        assert_eq!(result, TackyVal::Constant(3));
+        assert_eq!(instructions.len(), 0);
+    }
+
+    #[test]
+    pub fn test_emit_expression_unary() {
+        let mut emit = TackyEmit{tmp_var_count:0};
+        let ast_exp = AstExpression::Unary {
+            0: Negate,
+            1: Box::new(AstExpression::Constant {
+                0: AstConstant { value: 3},
+            })
+        };
+        let mut instructions : Vec<TackyInstruction> = Vec::new();
+        let result = emit.emit_expression(&ast_exp, &mut instructions);
+
+        assert_eq!(result, TackyVal::Var(String::from("tmp.1")));
+        assert_eq!(instructions.len(), 1);
+        let instruction = instructions.get(0).unwrap();
+        if let TackyInstruction::Unary(op, src, dst) = instruction {
+            assert_eq!(op, &TackyUnaryOp::Negate);
+            assert_eq!(src, &TackyVal::Constant(3));
+            assert_eq!(dst, &TackyVal::Var(String::from("tmp.1")));
+        } else {
+            panic!();
+        }
+    }
+
+    #[test]
+    pub fn test_emit_return() {
+        let mut emit = TackyEmit{tmp_var_count:0};
+        let ast_return = AstReturn {
+            expression: AstExpression::Constant {
+                0: AstConstant { value: 3},
+            }
+        };
+        let mut instructions : Vec<TackyInstruction> = Vec::new();
+        emit.emit_return(&ast_return, &mut instructions);
+    }
+
+    #[test]
+    pub fn test_make_temporary() {
+        let mut emit = TackyEmit{tmp_var_count:0};
+        let result = emit.make_temporary();
+        assert_eq!(result, String::from("tmp.1"));
+        let result2 = emit.make_temporary();
+        assert_eq!(result2, String::from("tmp.2"));
+    }
+
+    #[test]
+    pub fn test_convert_unop() {
+        let result = TackyEmit::convert_unop(&Negate);
+        assert_eq!(result, TackyUnaryOp::Negate);
+
+        let result2 = TackyEmit::convert_unop(&BitwiseComplement);
+        assert_eq!(result2, TackyUnaryOp::Complement);
+    }
+    #[test]
+    pub fn test_emit_function() {
+        let mut emit = TackyEmit{tmp_var_count:0};
+        let function = AstFunction {
+            identifier: "main".to_string(),
+            body: AstStatement {
+                return_exp: AstReturn {
+                    expression: AstExpression::Constant {
+                        0: AstConstant { value: 3},
+                    }
+                }
+            },
+        };
+
+        let result = emit.emit_function(&function);
+        assert_eq!(result.identifier, "main");
+        assert_eq!(result.body.len(), 1);
+        let instruction = result.body.get(0).unwrap();
+        if let TackyInstruction::Return(val) = instruction {
+            assert_eq!(val, &TackyVal::Constant(3));
+        } else {
+            panic!();
+        }
+    }
+
+    #[test]
+    pub fn test_emit_program() {
+        let mut emit = TackyEmit{tmp_var_count:0};
+        let program = AstProgram {
+            function: AstFunction {
+                identifier: "main".to_string(),
+                body: AstStatement {
+                    return_exp: AstReturn {
+                        expression: AstExpression::Constant {
+                            0: AstConstant { value: 3},
+                        }
+                    }
+                }
+            }
+        };
+
+        let result = emit.emit_program(&program);
+        assert_eq!(result.function_def.identifier, "main");
+        assert_eq!(result.function_def.body.len(), 1);
+
+        let instruction = result.function_def.body.get(0).unwrap();
+        if let TackyInstruction::Return(val) = instruction {
+            assert_eq!(val, &TackyVal::Constant(3));
+        } else {
+            panic!();
+        }
+    }
+}
