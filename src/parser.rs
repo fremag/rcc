@@ -40,11 +40,14 @@ impl Parser {
 
     pub(crate) fn parse_expression(&self, tokens: &mut Vec<String>) -> Result<AstExpression, String> {
         if let Ok(constant) = self.parse_constant(tokens) {
-            Ok(AstExpression::Constant(constant))
+            Ok(AstExpression::Constant { constant: constant })
         } else if tokens[0] == "~" || tokens[0] == "-" {
             if let Ok(op) = self.parse_unop(tokens) {
                 if let Ok(exp) = self.parse_expression(tokens) {
-                    Ok(AstExpression::Unary(op, Box::new(exp)))
+                    Ok(AstExpression::Unary {
+                        unary_op: op,
+                        expression: Box::new(exp)
+                    })
                 } else {
                     Err("Invalid unary operator".to_string())
                 }
@@ -202,7 +205,7 @@ mod tests {
         let expression = parser.parse_expression(&mut tokens);
         assert_eq!(expression.is_ok(), true);
         match expression.unwrap() {
-            AstExpression::Constant(cst) => {
+            AstExpression::Constant { constant: cst } => {
                 assert_eq!(cst.value, 123);
                 return;
             }
@@ -217,10 +220,10 @@ mod tests {
 
         let expression = parser.parse_expression(&mut tokens);
         assert_eq!(expression.is_ok(), true);
-        if let AstExpression::Unary(op, exp) = expression.unwrap() {
+        if let AstExpression::Unary { unary_op: op, expression: exp } = expression.unwrap() {
             assert_eq!(op, AstUnaryOp::BitwiseComplement);
             match exp.as_ref() {
-                AstExpression::Constant(cst) => {
+                AstExpression::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
                 },
                 _ => panic!("Invalid expression")
@@ -239,10 +242,10 @@ mod tests {
 
         let expression = parser.parse_expression(&mut tokens);
         assert_eq!(expression.is_ok(), true);
-        if let AstExpression::Unary(op, exp) = expression.unwrap() {
+        if let AstExpression::Unary { unary_op: op, expression: exp } = expression.unwrap() {
             assert_eq!(op, AstUnaryOp::Negate);
             match exp.as_ref() {
-                AstExpression::Constant(cst) => {
+                AstExpression::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
                 },
                 _ => panic!("Invalid expression")
@@ -261,9 +264,9 @@ mod tests {
 
         let expression = parser.parse_expression(&mut tokens);
         if let Ok(exp1) = expression
-            && let AstExpression::Unary(negate1, sub_exp) = exp1
-            && let AstExpression::Unary(bitwise_complement, sub_exp2) = sub_exp.as_ref()
-            && let AstExpression::Constant(cst) = sub_exp2.as_ref()
+            && let AstExpression::Unary { unary_op: negate1, expression: sub_exp } = exp1
+            && let AstExpression::Unary { unary_op: bitwise_complement, expression: sub_exp2 } = sub_exp.as_ref()
+            && let AstExpression::Constant { constant: cst } = sub_exp2.as_ref()
         {
             assert_eq!(negate1, AstUnaryOp::Negate);
             assert_eq!(*bitwise_complement, AstUnaryOp::BitwiseComplement);
@@ -289,7 +292,7 @@ mod tests {
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), true);
         match result.unwrap().expression {
-            AstExpression::Constant(cst) => {
+            AstExpression::Constant { constant: cst } => {
                 assert_eq!(cst.value, 123);
                 return;
             }
@@ -328,7 +331,7 @@ mod tests {
         let result = parser.parse_statement(&mut tokens);
         assert_eq!(result.is_ok(), true);
         match result.unwrap().return_exp.expression {
-            AstExpression::Constant(cst) => {
+            AstExpression::Constant { constant: cst } => {
                 assert_eq!(cst.value, 123);
                 return;
             }
@@ -347,7 +350,7 @@ mod tests {
         let function = result.unwrap();
         let expression = function.body.return_exp.expression;
         match expression {
-            AstExpression::Constant(cst) => {
+            AstExpression::Constant { constant: cst } => {
                 assert_eq!(cst.value, 2);
             }
             _ => panic!("Invalid expression")
@@ -366,10 +369,10 @@ mod tests {
         let function = result.unwrap();
         let expression = function.function.body.return_exp.expression;
         match expression {
-            AstExpression::Constant(cst) => {
+            AstExpression::Constant { constant: cst } => {
                 assert_eq!(cst.value, 2);
             },
-            AstExpression::Unary(_, _) => todo!()
+            AstExpression::Unary { unary_op: _, expression: _ } => todo!()
         }
 
         assert_eq!(function.function.identifier, "main".to_string());

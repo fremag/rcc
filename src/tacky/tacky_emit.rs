@@ -28,10 +28,10 @@ impl TackyEmit {
 
     pub fn emit_expression(&mut self, expression: &AstExpression, instructions: &mut Vec<TackyInstruction>) -> TackyVal {
         match expression {
-            AstExpression::Constant(cst) => {
+            AstExpression::Constant { constant: cst } => {
                 TackyVal::Constant(cst.value)
             }
-            AstExpression::Unary(op, inner) => {
+            AstExpression::Unary { unary_op: op, expression: inner } => {
                 let exp = inner.as_ref().clone();
                 let src = self.emit_expression(&exp, instructions);
                 let dst_name = self.make_temporary();
@@ -145,7 +145,7 @@ mod tests {
     pub fn test_emit_expression_constant() {
         let mut emit = TackyEmit::new();
         let ast_exp = AstExpression::Constant {
-            0: AstConstant { value: 3},
+            constant: AstConstant { value: 3},
         };
         let mut instructions : Vec<TackyInstruction> = Vec::new();
         let result = emit.emit_expression(&ast_exp, &mut instructions);
@@ -159,9 +159,9 @@ mod tests {
         let mut emit = TackyEmit::new();
 
         let ast_exp = AstExpression::Unary {
-            0: Negate,
-            1: Box::new(AstExpression::Constant {
-                0: AstConstant { value: 3},
+            unary_op: Negate,
+            expression: Box::new(AstExpression::Constant {
+                constant: AstConstant { value: 3},
             })
         };
         let mut instructions : Vec<TackyInstruction> = Vec::new();
@@ -185,7 +185,7 @@ mod tests {
 
         let ast_return = AstReturn {
             expression: AstExpression::Constant {
-                0: AstConstant { value: 3},
+                constant: AstConstant { value: 3},
             }
         };
         let mut instructions : Vec<TackyInstruction> = Vec::new();
@@ -206,11 +206,11 @@ mod tests {
 
         let ast_return = AstReturn {
             expression: AstExpression::Unary {
-                0: Negate,
-                1: Box::new(AstExpression::Unary {
-                    0: BitwiseComplement,
-                    1: Box::new(AstExpression::Constant {
-                        0: AstConstant { value: 3},
+                unary_op: Negate,
+                expression: Box::new(AstExpression::Unary {
+                    unary_op: BitwiseComplement,
+                    expression: Box::new(AstExpression::Constant {
+                        constant: AstConstant { value: 3},
                     })
                 })
             }
@@ -268,7 +268,7 @@ mod tests {
             body: AstStatement {
                 return_exp: AstReturn {
                     expression: AstExpression::Constant {
-                        0: AstConstant { value: 3},
+                        constant: AstConstant { value: 3},
                     }
                 }
             },
@@ -294,7 +294,7 @@ mod tests {
                 body: AstStatement {
                     return_exp: AstReturn {
                         expression: AstExpression::Constant {
-                            0: AstConstant { value: 3},
+                            constant: AstConstant { value: 3},
                         }
                     }
                 }
