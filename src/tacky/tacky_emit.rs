@@ -36,8 +36,9 @@ impl TackyEmit {
     }
 
     fn make_temporary(&mut self) -> String {
+        let tmp = String::from("tmp.") + &self.tmp_var_count.to_string();
         self.tmp_var_count+=1;
-        String::from("tmp.") + &self.tmp_var_count.to_string()
+        tmp
     }
 
     pub fn emit_return(&mut self, ast_return: &AstReturn, instructions: &mut Vec<TackyInstruction>) {
@@ -93,13 +94,13 @@ mod tests {
         let mut instructions : Vec<TackyInstruction> = Vec::new();
         let result = emit.emit_expression(&ast_exp, &mut instructions);
 
-        assert_eq!(result, TackyVal::Var(String::from("tmp.1")));
+        assert_eq!(result, TackyVal::Var(String::from("tmp.0")));
         assert_eq!(instructions.len(), 1);
         let instruction = instructions.get(0).unwrap();
         if let TackyInstruction::Unary(op, src, dst) = instruction {
             assert_eq!(op, &TackyUnaryOp::Negate);
             assert_eq!(src, &TackyVal::Constant(3));
-            assert_eq!(dst, &TackyVal::Var(String::from("tmp.1")));
+            assert_eq!(dst, &TackyVal::Var(String::from("tmp.0")));
         } else {
             panic!();
         }
@@ -115,15 +116,56 @@ mod tests {
         };
         let mut instructions : Vec<TackyInstruction> = Vec::new();
         emit.emit_return(&ast_return, &mut instructions);
+        assert_eq!(instructions.len(), 1);
+        let instruction = instructions.get(0).unwrap();
+        if let TackyInstruction::Return(val) = instruction {
+            assert_eq!(val, &TackyVal::Constant(3));
+        } else {
+            panic!();
+        }
+    }
+
+
+    #[test]
+    pub fn test_emit_return_double_unary() {
+        let mut emit = TackyEmit{tmp_var_count:0};
+        let ast_return = AstReturn {
+            expression: AstExpression::Unary {
+                0: Negate,
+                1: Box::new(AstExpression::Unary {
+                    0: BitwiseComplement,
+                    1: Box::new(AstExpression::Constant {
+                        0: AstConstant { value: 3},
+                    })
+                })
+            }
+        };
+        let mut instructions : Vec<TackyInstruction> = Vec::new();
+        emit.emit_return(&ast_return, &mut instructions);
+        assert_eq!(instructions.len(), 2);
+        let instruction = instructions.get(0).unwrap();
+        if let TackyInstruction::Unary(op, src, dst) = instruction {
+            assert_eq!(op, &TackyUnaryOp::Negate);
+            assert_eq!(src, &TackyVal::Var(String::from("tmp.0")));
+            assert_eq!(dst, &TackyVal::Var(String::from("tmp.1")));
+        } else {
+            panic!();
+        }
+        let instruction = instructions.get(1).unwrap();
+        if let TackyInstruction::Unary(op, src, dst) = instruction {
+            assert_eq!(op, &TackyUnaryOp::Complement);
+            assert_eq!(src, &TackyVal::Var(String::from("tmp.1")));
+            assert_eq!(dst, &TackyVal::Var(String::from("tmp.")));
+        }
     }
 
     #[test]
     pub fn test_make_temporary() {
         let mut emit = TackyEmit{tmp_var_count:0};
         let result = emit.make_temporary();
-        assert_eq!(result, String::from("tmp.1"));
+        assert_eq!(result, String::from("tmp.0"));
         let result2 = emit.make_temporary();
-        assert_eq!(result2, String::from("tmp.2"));
+        assert_eq!(result2, String::from("tmp.1"));
     }
 
     #[test]
