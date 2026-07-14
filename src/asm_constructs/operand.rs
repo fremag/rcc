@@ -1,11 +1,6 @@
-use crate::asm_constructs::register::Register;
+use crate::asm_constructs::instruction::StackFrame;
 
 pub trait Operand: std::fmt::Debug {
     fn to_code(&self) -> String;
-}
-
-impl Operand for Register {
-    fn to_code(&self) -> String {
-        String::from("%eax")
-    }
+    fn fix_pseudo_registers(&mut self, _pseudo_registers: &mut StackFrame) -> Option<Box<dyn Operand>>;
 }

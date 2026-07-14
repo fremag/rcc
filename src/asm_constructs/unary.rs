@@ -1,5 +1,5 @@
 use std::fmt::{Debug };
-use crate::asm_constructs::instruction::Instruction;
+use crate::asm_constructs::instruction::{Instruction, StackFrame};
 use crate::asm_constructs::operand::Operand;
 
 #[derive(Debug)]
@@ -22,5 +22,12 @@ impl Unary {
 impl Instruction for Unary {
     fn to_code(&self) -> String {
         String::from("")
+    }
+
+    fn fix_pseudo_registers(&mut self, _pseudo_registers: &mut StackFrame) {
+        let new_operand = self.operand.fix_pseudo_registers(_pseudo_registers);
+        if let Some(new_operand) = new_operand {
+            self.operand = new_operand;
+        }
     }
 }

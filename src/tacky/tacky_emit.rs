@@ -1,7 +1,7 @@
 use crate::asm_constructs;
 use crate::asm_constructs::function::FunctionDefinition;
 use crate::asm_constructs::imm::Imm;
-use crate::asm_constructs::instruction::Instruction;
+use crate::asm_constructs::instruction::{Instruction, StackFrame};
 use crate::asm_constructs::mov::Mov;
 use crate::asm_constructs::operand::Operand;
 use crate::asm_constructs::program::AsmProgram;
@@ -117,9 +117,12 @@ impl TackyEmit {
             };
 
         }
+
+        replace_pseudo_registers(&mut instructions);
+
         FunctionDefinition {
             identifier: function.identifier.clone(),
-            instructions,
+            instructions
         }
     }
 
@@ -132,6 +135,15 @@ impl TackyEmit {
             unreachable!();
         }
     }
+}
+
+fn replace_pseudo_registers(instructions: &mut Vec<Box<dyn Instruction>>) {
+    let mut stack_frame = StackFrame::new();
+
+    instructions.into_iter().for_each(|instruction| {
+        let inst = instruction.as_mut();
+        inst.fix_pseudo_registers(&mut stack_frame);
+    });
 }
 
 #[cfg(test)]
@@ -198,7 +210,6 @@ mod tests {
             panic!();
         }
     }
-
 
     #[test]
     pub fn test_emit_return_double_unary() {
