@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use crate::asm_constructs::instruction::{Instruction, StackFrame};
-use crate::asm_constructs::mov::Mov;
 
 #[derive(Debug)]
 pub struct AllocateStack {
