@@ -13,7 +13,10 @@ pub struct Register {
 
 impl Operand for Register {
     fn to_code(&self) -> String {
-        String::from("%eax")
+        match self.reg {
+            Reg::AX => String::from("%eax"),
+            Reg::R10 => String::from("%r10d")
+        }
     }
 
     fn fix_pseudo_registers(&mut self, _pseudo_registers: &mut StackFrame) -> Option<Box<dyn Operand>> {

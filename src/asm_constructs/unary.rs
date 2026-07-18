@@ -21,7 +21,12 @@ impl Unary {
 
 impl Instruction for Unary {
     fn to_code(&self) -> String {
-        String::from("")
+        let unary = match self.unary_operator {
+            UnaryOperator::Neg => "neg1",
+            UnaryOperator::Not => "not1"
+        };
+        let operand = self.operand.as_ref().to_code();
+        String::from(format!("{} {}\n", unary, operand))
     }
 
     fn fix_pseudo_registers(&mut self, _pseudo_registers: &mut StackFrame) {

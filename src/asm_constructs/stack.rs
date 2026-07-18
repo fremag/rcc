@@ -8,7 +8,7 @@ pub struct Stack {
 
 impl Operand for Stack {
     fn to_code(&self) -> String {
-        todo!()
+        format!("{}(%rbp)", self.offset)
     }
 
     fn fix_pseudo_registers(&mut self, _pseudo_registers: &mut StackFrame) -> Option<Box<dyn Operand>> {
