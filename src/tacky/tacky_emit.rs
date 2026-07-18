@@ -1,4 +1,5 @@
 use crate::asm_constructs;
+use crate::asm_constructs::allocate_stack::AllocateStack;
 use crate::asm_constructs::function::FunctionDefinition;
 use crate::asm_constructs::imm::Imm;
 use crate::asm_constructs::instruction::{Instruction, StackFrame};
@@ -118,7 +119,8 @@ impl TackyEmit {
 
         }
 
-        replace_pseudo_registers(&mut instructions);
+        let stack_frame = replace_pseudo_registers(&mut instructions);
+        instructions.insert(0, Box::new(AllocateStack::new(stack_frame.len()*4)));
 
         FunctionDefinition {
             identifier: function.identifier.clone(),
@@ -137,13 +139,15 @@ impl TackyEmit {
     }
 }
 
-fn replace_pseudo_registers(instructions: &mut Vec<Box<dyn Instruction>>) {
+fn replace_pseudo_registers(instructions: &mut Vec<Box<dyn Instruction>>) -> StackFrame{
     let mut stack_frame = StackFrame::new();
 
     instructions.into_iter().for_each(|instruction| {
         let inst = instruction.as_mut();
         inst.fix_pseudo_registers(&mut stack_frame);
     });
+
+    stack_frame
 }
 
 #[cfg(test)]

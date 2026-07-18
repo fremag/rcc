@@ -1,9 +1,16 @@
 use std::fmt::Debug;
 use crate::asm_constructs::instruction::{Instruction, StackFrame};
+use crate::asm_constructs::mov::Mov;
 
 #[derive(Debug)]
 pub struct AllocateStack {
-    size: i32
+    size: usize
+}
+
+impl AllocateStack {
+    pub fn new(size: usize) -> Self {
+        Self { size }
+    }
 }
 
 impl Instruction for AllocateStack {

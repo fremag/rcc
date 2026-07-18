@@ -6,12 +6,17 @@ pub trait Instruction: std::fmt::Debug {
 }
 
 pub struct StackFrame {
-    items : HashMap<String, usize> 
+    items : HashMap<String, usize>
 }
 
 impl StackFrame {
+
     pub fn new() -> Self {
         Self {items: HashMap::new()}
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.items.len()
     }
 
     pub fn get(&mut self, key: &str) -> usize {

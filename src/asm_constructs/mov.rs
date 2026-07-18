@@ -17,7 +17,7 @@ impl Instruction for Mov {
         if let Some(new_src) = new_src {
             self.src = new_src;
         }
-        
+
         let new_dest = self.src.fix_pseudo_registers(_pseudo_registers);
         if let Some(new_dest) = new_dest {
             self.dest = new_dest;
