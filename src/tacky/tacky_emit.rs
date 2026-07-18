@@ -1,13 +1,10 @@
 use crate::asm_constructs;
 use crate::asm_constructs::allocate_stack::AllocateStack;
 use crate::asm_constructs::function::FunctionDefinition;
-use crate::asm_constructs::imm::Imm;
 use crate::asm_constructs::instruction::{Instruction, StackFrame};
 use crate::asm_constructs::mov::Mov;
-use crate::asm_constructs::operand::Operand;
+use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::program::AsmProgram;
-use crate::asm_constructs::pseudo::Pseudo;
-use crate::asm_constructs::register::{Reg, Register};
 use crate::asm_constructs::ret::Ret;
 use crate::asm_constructs::unary::UnaryOperator;
 use crate::ast_model::ast_return::AstReturn;
@@ -85,7 +82,7 @@ impl TackyEmit {
         }
     }
 
-    pub fn to_asm(&mut self, program: &TackyProgram) -> AsmProgram {
+    pub fn convert_asm(&mut self, program: &TackyProgram) -> AsmProgram {
         let function_definition = self.function_to_asm(&program.function_def);
 
         AsmProgram {
@@ -98,8 +95,8 @@ impl TackyEmit {
         for tacky_instruction in &function.body {
             if let TackyInstruction::Return(val) = tacky_instruction {
                 let src= self.value_to_asm(&val);
-                let dest = Register {reg : Reg::AX };
-                let mov = Mov {src, dest: Box::new(dest)};
+                let dest = Operand::Register {reg : Reg::AX };
+                let mov = Mov {src, dest};
                 instructions.push(Box::new(mov));
                 instructions.push(Box::new(Ret{}));
             } else if let TackyInstruction::Unary(op, src, dst) = tacky_instruction {
@@ -128,11 +125,11 @@ impl TackyEmit {
         }
     }
 
-    fn value_to_asm(&self, tacky_val: &TackyVal) -> Box<dyn Operand> {
+    fn value_to_asm(&self, tacky_val: &TackyVal) -> Operand {
         if let Constant(value) = tacky_val {
-            Box::new(Imm { value: *value })
+            Operand::Imm { value: *value }
         } else if let TackyVal::Var(name) = tacky_val {
-            Box::new(Pseudo { identifier: name.clone() })
+            Operand::Pseudo { identifier: name.clone() }
         } else {
             unreachable!();
         }

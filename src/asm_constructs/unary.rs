@@ -10,11 +10,11 @@ pub enum UnaryOperator {
 #[derive(Debug)]
 pub struct Unary {
     unary_operator: UnaryOperator,
-    operand: Box<dyn Operand>
+    operand: Operand
 }
 
 impl Unary {
-    pub fn new(unary_operator: UnaryOperator, operand: Box<dyn Operand>) -> Self {
+    pub fn new(unary_operator: UnaryOperator, operand: Operand) -> Self {
         Self { unary_operator, operand }
     }
 }
@@ -25,7 +25,7 @@ impl Instruction for Unary {
             UnaryOperator::Neg => "neg1",
             UnaryOperator::Not => "not1"
         };
-        let operand = self.operand.as_ref().to_code();
+        let operand = self.operand.to_code();
         String::from(format!("{} {}\n", unary, operand))
     }
 

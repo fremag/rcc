@@ -97,7 +97,7 @@ fn main() -> Result<(), std::io::Error> {
         process::exit(0);
     }
 
-    let program_asm = emit.to_asm(&tacky_program);
+    let program_asm = emit.convert_asm(&tacky_program);
 
     if action == "--codegen" {
         print!("{program_asm:?}");

@@ -3,8 +3,8 @@ use crate::asm_constructs::operand::Operand;
 
 #[derive(Debug)]
 pub struct Mov {
-    pub(crate) src : Box<dyn Operand>,
-    pub(crate) dest : Box<dyn Operand>
+    pub(crate) src : Operand,
+    pub(crate) dest : Operand
 }
 
 impl Instruction for Mov {
