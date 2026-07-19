@@ -1,12 +1,7 @@
-use crate::asm_constructs;
-use crate::asm_constructs::allocate_stack::AllocateStack;
 use crate::asm_constructs::function::FunctionDefinition;
-use crate::asm_constructs::instruction::{Instruction, StackFrame};
-use crate::asm_constructs::mov::Mov;
+use crate::asm_constructs::instruction::{Instruction, StackFrame, UnaryOperator};
 use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::program::AsmProgram;
-use crate::asm_constructs::ret::Ret;
-use crate::asm_constructs::unary::UnaryOperator;
 use crate::ast_model::ast_return::AstReturn;
 use crate::ast_model::expression::AstExpression;
 use crate::ast_model::function::AstFunction;
@@ -27,7 +22,7 @@ impl TackyEmit {
     pub fn emit_expression(&mut self, expression: &AstExpression, instructions: &mut Vec<TackyInstruction>) -> TackyVal {
         match expression {
             AstExpression::Constant { constant: cst } => {
-                TackyVal::Constant(cst.value)
+                Constant(cst.value)
             }
             AstExpression::Unary { unary_op: op, expression: inner } => {
                 let exp = inner.as_ref().clone();
@@ -91,24 +86,24 @@ impl TackyEmit {
     }
 
     pub fn function_to_asm(&mut self, function: &TackyFunction) -> FunctionDefinition {
-        let mut instructions : Vec<Box< dyn Instruction>> = Vec::new();
+        let mut instructions : Vec<Instruction> = Vec::new();
         for tacky_instruction in &function.body {
             if let TackyInstruction::Return(val) = tacky_instruction {
                 let src= self.value_to_asm(&val);
                 let dest = Operand::Register {reg : Reg::AX };
-                let mov = Mov {src, dest};
-                instructions.push(Box::new(mov));
-                instructions.push(Box::new(Ret{}));
+                let mov = Instruction::Mov {src, dest};
+                instructions.push(mov);
+                instructions.push(Instruction::Ret{});
             } else if let TackyInstruction::Unary(op, src, dst) = tacky_instruction {
                 let src= self.value_to_asm(&src);
                 let dest= self.value_to_asm(&dst);
-                let mov = Mov {src, dest};
-                instructions.push(Box::new(mov));
+                let mov = Instruction::Mov {src, dest};
+                instructions.push(mov);
 
                 let unary_operator = Self::convert_asm_unop(op);
                 let dest2= self.value_to_asm(&dst);
-                let unary = asm_constructs::unary::Unary::new(unary_operator, dest2);
-                instructions.push(Box::new(unary));
+                let unary = Instruction::Unary {unary_operator, operand: dest2};
+                instructions.push(unary);
 
             } else {
                 unreachable!()
@@ -116,12 +111,12 @@ impl TackyEmit {
 
         }
 
-        let stack_frame = replace_pseudo_registers(&mut instructions);
-        instructions.insert(0, Box::new(AllocateStack::new(stack_frame.len()*4)));
+        let (mut new_instructions, stack_frame) = replace_pseudo_registers(&instructions);
+        new_instructions.insert(0, Instruction::AllocateStack{size: stack_frame.len()*4});
 
         FunctionDefinition {
             identifier: function.identifier.clone(),
-            instructions
+            instructions: new_instructions
         }
     }
 
@@ -136,15 +131,16 @@ impl TackyEmit {
     }
 }
 
-fn replace_pseudo_registers(instructions: &mut Vec<Box<dyn Instruction>>) -> StackFrame{
+fn replace_pseudo_registers(instructions: &Vec<Instruction>) -> (Vec<Instruction>, StackFrame) {
     let mut stack_frame = StackFrame::new();
+    let mut new_instructions = Vec::<Instruction>::new();
 
     instructions.into_iter().for_each(|instruction| {
-        let inst = instruction.as_mut();
-        inst.fix_pseudo_registers(&mut stack_frame);
+        let result = instruction.fix_pseudo_registers(&mut stack_frame);
+        new_instructions.push(result);
     });
 
-    stack_frame
+    (new_instructions, stack_frame)
 }
 
 #[cfg(test)]
@@ -163,7 +159,7 @@ mod tests {
         let mut instructions : Vec<TackyInstruction> = Vec::new();
         let result = emit.emit_expression(&ast_exp, &mut instructions);
 
-        assert_eq!(result, TackyVal::Constant(3));
+        assert_eq!(result, Constant(3));
         assert_eq!(instructions.len(), 0);
     }
 
@@ -185,7 +181,7 @@ mod tests {
         let instruction = instructions.get(0).unwrap();
         if let TackyInstruction::Unary(op, src, dst) = instruction {
             assert_eq!(op, &TackyUnaryOp::Negate);
-            assert_eq!(src, &TackyVal::Constant(3));
+            assert_eq!(src, &Constant(3));
             assert_eq!(dst, &TackyVal::Var(String::from("tmp.0")));
         } else {
             panic!();
@@ -206,7 +202,7 @@ mod tests {
         assert_eq!(instructions.len(), 1);
         let instruction = instructions.get(0).unwrap();
         if let TackyInstruction::Return(val) = instruction {
-            assert_eq!(val, &TackyVal::Constant(3));
+            assert_eq!(val, &Constant(3));
         } else {
             panic!();
         }
@@ -233,7 +229,7 @@ mod tests {
         let instruction = instructions.get(0).unwrap();
         if let TackyInstruction::Unary(op, src, dst) = instruction {
             assert_eq!(op, &TackyUnaryOp::Complement);
-            assert_eq!(src, &TackyVal::Constant(3));
+            assert_eq!(src, &Constant(3));
             assert_eq!(dst, &TackyVal::Var(String::from("tmp.0")));
         }
         let instruction = instructions.get(1).unwrap();
@@ -291,7 +287,7 @@ mod tests {
         assert_eq!(result.body.len(), 1);
         let instruction = result.body.get(0).unwrap();
         if let TackyInstruction::Return(val) = instruction {
-            assert_eq!(val, &TackyVal::Constant(3));
+            assert_eq!(val, &Constant(3));
         } else {
             panic!();
         }

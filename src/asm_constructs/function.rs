@@ -3,7 +3,7 @@ use crate::asm_constructs::instruction::Instruction;
 #[derive(Debug)]
 pub struct FunctionDefinition {
     pub(crate) identifier: String,
-    pub(crate) instructions : Vec<Box<dyn Instruction>>
+    pub(crate) instructions : Vec<Instruction>
 }
 
 impl FunctionDefinition {

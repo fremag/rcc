@@ -1,23 +1,23 @@
 use crate::asm_constructs::instruction::StackFrame;
+use crate::asm_constructs::operand::Operand::Stack;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Operand {
     Imm {value: i32},
     Pseudo {identifier: String},
     Register {reg: Reg},
-    Stack {offset: i32}
+    Stack {offset: usize}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Reg {
     AX, R10
 }
 
-
 impl Operand {
     pub fn to_code(&self) -> String {
         match self {
-            Operand::Imm { value } =>             String::from(format!("${}", value)),
+            Operand::Imm { value } => String::from(format!("${}", value)),
             Operand::Pseudo { identifier } => String::from(identifier.clone()),
             Operand::Register { reg } => {
                 match reg {
@@ -29,15 +29,13 @@ impl Operand {
         }
     }
 
-    pub fn fix_pseudo_registers(&mut self, _pseudo_registers: &mut StackFrame) -> Option<Operand> {
-        None
+    pub fn fix_pseudo_registers(&self, _pseudo_registers: &mut StackFrame) -> Operand {
+        match self {
+            Operand::Pseudo { identifier } => {
+                let offset = _pseudo_registers.get(&identifier);
+                Stack { offset} 
+            },
+            _ => self.clone()
+        }
     }
-
-
-    // Stack
-    // fn fix_pseudo_registers(&mut self, _pseudo_registers: &mut StackFrame) -> Option<Box<dyn Operand>> {
-    //     let offset = _pseudo_registers.get(&self.identifier);
-    //     let stack = Stack { offset };
-    //     Some(Box::new(stack))
-    // }
 }
