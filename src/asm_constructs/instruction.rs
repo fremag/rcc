@@ -44,28 +44,6 @@ impl Instruction {
             Instruction::Ret => Instruction::Ret
         }
     }
-
-/*
-    fn fix_pseudo_registers(&mut self, _pseudo_registers: &mut StackFrame) {
-        let new_src = self.src.fix_pseudo_registers(_pseudo_registers);
-        if let Some(new_src) = new_src {
-            self.src = new_src;
-        }
-
-        let new_dest = self.src.fix_pseudo_registers(_pseudo_registers);
-        if let Some(new_dest) = new_dest {
-            self.dest = new_dest;
-        }
-    }
-
-    fn fix_pseudo_registers(&mut self, _pseudo_registers: &mut StackFrame) {
-        let new_operand = self.operand.fix_pseudo_registers(_pseudo_registers);
-        if let Some(new_operand) = new_operand {
-            self.operand = new_operand;
-        }
-    }
-
- */
 }
 
 pub struct StackFrame {
