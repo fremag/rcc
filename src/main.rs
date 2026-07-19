@@ -1,30 +1,38 @@
+pub mod asm_constructs;
+pub mod ast_model;
 pub mod lexer;
 pub mod parser;
-pub mod ast_model;
-pub mod asm_constructs;
 mod tacky;
 
-use std::env;
-use std::fs;
-use std::process;
-use std::process::Command;
-use std::path::{Path, PathBuf};
 use crate::lexer::Lexer;
 use crate::parser::Parser;
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process;
+use std::process::Command;
 
-fn change_extension(input_file: &str, extension : &str) -> PathBuf {
+fn change_extension(input_file: &str, extension: &str) -> PathBuf {
     let mut output_file = PathBuf::from(input_file);
     output_file.set_extension(extension);
     output_file
 }
 
-fn run_preprocessor(gcc_path: &str, input_file: &str, output_file: &Path) -> std::io::Result<process::Output> {
+fn run_preprocessor(
+    gcc_path: &str,
+    input_file: &str,
+    output_file: &Path,
+) -> std::io::Result<process::Output> {
     Command::new(gcc_path)
         .args(["-E", "-P", input_file, "-o", output_file.to_str().unwrap()])
         .output()
 }
 
-fn run_codegen(gcc_path: &str, asm_file: &str, output_file: &Path) -> std::io::Result<process::Output> {
+fn run_codegen(
+    gcc_path: &str,
+    asm_file: &str,
+    output_file: &Path,
+) -> std::io::Result<process::Output> {
     Command::new(gcc_path)
         .args([asm_file, "-o", output_file.to_str().unwrap()])
         .output()
@@ -49,19 +57,20 @@ fn main() -> Result<(), std::io::Error> {
     let output = String::from_utf8_lossy(&command.stdout);
     println!("{output}");
 
-    let contents = fs::read_to_string(&output_file)
-         .expect(&format!("Should have been able to read the file {}", output_file_str));
-    let lexer  = Lexer::new(contents);
-    let mut tokens = match lexer.tokenize()  {
+    let contents = fs::read_to_string(&output_file).expect(&format!(
+        "Should have been able to read the file {}",
+        output_file_str
+    ));
+    let lexer = Lexer::new(contents);
+    let mut tokens = match lexer.tokenize() {
         Err(err_msg) => {
             print!("{err_msg}");
             process::exit(1);
         }
-        Ok(tokens) => tokens
+        Ok(tokens) => tokens,
     };
 
     if action == "--lex" {
-
         println!("Tokens:");
         for token in &tokens {
             println!("{token}");
@@ -74,7 +83,7 @@ fn main() -> Result<(), std::io::Error> {
     let parser = Parser::new();
 
     let program_result = parser.parse_program(&mut tokens);
-    if let Err(_) = program_result  {
+    if let Err(_) = program_result {
         process::exit(1);
     }
 
@@ -108,12 +117,12 @@ fn main() -> Result<(), std::io::Error> {
 
     let asm_code = program_asm.to_code();
     println!("{asm_code}");
-    
+
     let asm_file = change_extension(input_file, "s");
     fs::write(asm_file, asm_code).expect("Should have been able to write the file");
     let exe_file = change_extension(input_file, "");
-    let command = run_codegen("/usr/bin/gcc", input_file, &exe_file)
-        .expect("failed to execute process");
+    let command =
+        run_codegen("/usr/bin/gcc", input_file, &exe_file).expect("failed to execute process");
     let output = String::from_utf8_lossy(&command.stdout);
     println!("{output}");
 
@@ -133,7 +142,7 @@ mod tests {
 
     #[test]
     fn compute_output_file_replaces_other_extension() {
-        let out = change_extension("path/to/source.cpp","i");
+        let out = change_extension("path/to/source.cpp", "i");
         assert_eq!(out, PathBuf::from("path/to/source.i"));
     }
 
@@ -151,11 +160,7 @@ mod tests {
 
     #[test]
     fn run_preprocessor_returns_error_for_missing_binary() {
-        let result = run_preprocessor(
-            "/nonexistent/path/to/gcc",
-            "input.c",
-            Path::new("output.i"),
-        );
+        let result = run_preprocessor("/nonexistent/path/to/gcc", "input.c", Path::new("output.i"));
         assert!(result.is_err());
     }
 }

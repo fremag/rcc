@@ -7,11 +7,11 @@ use crate::ast_model::expression::AstExpression;
 use crate::ast_model::function::AstFunction;
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::unary::AstUnaryOp;
-use crate::tacky::{TackyFunction, TackyInstruction, TackyProgram, TackyUnaryOp, TackyVal};
 use crate::tacky::TackyVal::Constant;
+use crate::tacky::{TackyFunction, TackyInstruction, TackyProgram, TackyUnaryOp, TackyVal};
 
 pub struct TackyEmit {
-    tmp_var_count : i32
+    tmp_var_count: i32,
 }
 
 impl TackyEmit {
@@ -19,12 +19,17 @@ impl TackyEmit {
         Self { tmp_var_count: 0 }
     }
 
-    pub fn emit_expression(&mut self, expression: &AstExpression, instructions: &mut Vec<TackyInstruction>) -> TackyVal {
+    pub fn emit_expression(
+        &mut self,
+        expression: &AstExpression,
+        instructions: &mut Vec<TackyInstruction>,
+    ) -> TackyVal {
         match expression {
-            AstExpression::Constant { constant: cst } => {
-                Constant(cst.value)
-            }
-            AstExpression::Unary { unary_op: op, expression: inner } => {
+            AstExpression::Constant { constant: cst } => Constant(cst.value),
+            AstExpression::Unary {
+                unary_op: op,
+                expression: inner,
+            } => {
                 let exp = inner.as_ref().clone();
                 let src = self.emit_expression(&exp, instructions);
                 let dst_name = self.make_temporary();
@@ -40,40 +45,44 @@ impl TackyEmit {
     fn convert_unop(ast_unary_op: &AstUnaryOp) -> TackyUnaryOp {
         match ast_unary_op {
             AstUnaryOp::Negate => TackyUnaryOp::Negate,
-            AstUnaryOp::BitwiseComplement => TackyUnaryOp::Complement
+            AstUnaryOp::BitwiseComplement => TackyUnaryOp::Complement,
         }
     }
 
     fn convert_asm_unop(ast_unary_op: &TackyUnaryOp) -> UnaryOperator {
         match ast_unary_op {
             TackyUnaryOp::Negate => UnaryOperator::Neg,
-            TackyUnaryOp::Complement => UnaryOperator::Not
+            TackyUnaryOp::Complement => UnaryOperator::Not,
         }
     }
 
     fn make_temporary(&mut self) -> String {
         let tmp = String::from("tmp.") + &self.tmp_var_count.to_string();
-        self.tmp_var_count+=1;
+        self.tmp_var_count += 1;
         tmp
     }
 
-    pub fn emit_return(&mut self, ast_return: &AstReturn, instructions: &mut Vec<TackyInstruction>) {
+    pub fn emit_return(
+        &mut self,
+        ast_return: &AstReturn,
+        instructions: &mut Vec<TackyInstruction>,
+    ) {
         let exp = self.emit_expression(&ast_return.expression, instructions);
         instructions.push(TackyInstruction::Return(exp));
     }
 
     pub fn emit_program(&mut self, program: &AstProgram) -> TackyProgram {
-        TackyProgram{
-            function_def: self.emit_function(&program.function)
+        TackyProgram {
+            function_def: self.emit_function(&program.function),
         }
     }
 
     pub fn emit_function(&mut self, function: &AstFunction) -> TackyFunction {
-        let mut instructions : Vec<TackyInstruction> = Vec::new();
+        let mut instructions: Vec<TackyInstruction> = Vec::new();
         let _ = self.emit_return(&function.body.return_exp, &mut instructions);
         TackyFunction {
             identifier: function.identifier.clone(),
-            body: instructions
+            body: instructions,
         }
     }
 
@@ -86,37 +95,43 @@ impl TackyEmit {
     }
 
     pub fn function_to_asm(&mut self, function: &TackyFunction) -> FunctionDefinition {
-        let mut instructions : Vec<Instruction> = Vec::new();
+        let mut instructions: Vec<Instruction> = Vec::new();
         for tacky_instruction in &function.body {
             if let TackyInstruction::Return(val) = tacky_instruction {
-                let src= self.value_to_asm(&val);
-                let dest = Operand::Register {reg : Reg::AX };
-                let mov = Instruction::Mov {src, dest};
+                let src = self.value_to_asm(&val);
+                let dest = Operand::Register { reg: Reg::AX };
+                let mov = Instruction::Mov { src, dest };
                 instructions.push(mov);
-                instructions.push(Instruction::Ret{});
+                instructions.push(Instruction::Ret {});
             } else if let TackyInstruction::Unary(op, src, dst) = tacky_instruction {
-                let src= self.value_to_asm(&src);
-                let dest= self.value_to_asm(&dst);
-                let mov = Instruction::Mov {src, dest};
+                let src = self.value_to_asm(&src);
+                let dest = self.value_to_asm(&dst);
+                let mov = Instruction::Mov { src, dest };
                 instructions.push(mov);
 
                 let unary_operator = Self::convert_asm_unop(op);
-                let dest2= self.value_to_asm(&dst);
-                let unary = Instruction::Unary {unary_operator, operand: dest2};
+                let dest2 = self.value_to_asm(&dst);
+                let unary = Instruction::Unary {
+                    unary_operator,
+                    operand: dest2,
+                };
                 instructions.push(unary);
-
             } else {
                 unreachable!()
             };
-
         }
 
         let (mut new_instructions, stack_frame) = replace_pseudo_registers(&instructions);
-        new_instructions.insert(0, Instruction::AllocateStack{size: stack_frame.len()*4});
+        new_instructions.insert(
+            0,
+            Instruction::AllocateStack {
+                size: stack_frame.len() * 4,
+            },
+        );
 
         FunctionDefinition {
             identifier: function.identifier.clone(),
-            instructions: new_instructions
+            instructions: new_instructions,
         }
     }
 
@@ -124,7 +139,9 @@ impl TackyEmit {
         if let Constant(value) = tacky_val {
             Operand::Imm { value: *value }
         } else if let TackyVal::Var(name) = tacky_val {
-            Operand::Pseudo { identifier: name.clone() }
+            Operand::Pseudo {
+                identifier: name.clone(),
+            }
         } else {
             unreachable!();
         }
@@ -145,18 +162,18 @@ fn replace_pseudo_registers(instructions: &Vec<Instruction>) -> (Vec<Instruction
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::ast_model::constant::AstConstant;
     use crate::ast_model::statement::AstStatement;
     use crate::ast_model::unary::AstUnaryOp::{BitwiseComplement, Negate};
-    use super::*;
 
     #[test]
     pub fn test_emit_expression_constant() {
         let mut emit = TackyEmit::new();
         let ast_exp = AstExpression::Constant {
-            constant: AstConstant { value: 3},
+            constant: AstConstant { value: 3 },
         };
-        let mut instructions : Vec<TackyInstruction> = Vec::new();
+        let mut instructions: Vec<TackyInstruction> = Vec::new();
         let result = emit.emit_expression(&ast_exp, &mut instructions);
 
         assert_eq!(result, Constant(3));
@@ -170,10 +187,10 @@ mod tests {
         let ast_exp = AstExpression::Unary {
             unary_op: Negate,
             expression: Box::new(AstExpression::Constant {
-                constant: AstConstant { value: 3},
-            })
+                constant: AstConstant { value: 3 },
+            }),
         };
-        let mut instructions : Vec<TackyInstruction> = Vec::new();
+        let mut instructions: Vec<TackyInstruction> = Vec::new();
         let result = emit.emit_expression(&ast_exp, &mut instructions);
 
         assert_eq!(result, TackyVal::Var(String::from("tmp.0")));
@@ -194,10 +211,10 @@ mod tests {
 
         let ast_return = AstReturn {
             expression: AstExpression::Constant {
-                constant: AstConstant { value: 3},
-            }
+                constant: AstConstant { value: 3 },
+            },
         };
-        let mut instructions : Vec<TackyInstruction> = Vec::new();
+        let mut instructions: Vec<TackyInstruction> = Vec::new();
         emit.emit_return(&ast_return, &mut instructions);
         assert_eq!(instructions.len(), 1);
         let instruction = instructions.get(0).unwrap();
@@ -218,12 +235,12 @@ mod tests {
                 expression: Box::new(AstExpression::Unary {
                     unary_op: BitwiseComplement,
                     expression: Box::new(AstExpression::Constant {
-                        constant: AstConstant { value: 3},
-                    })
-                })
-            }
+                        constant: AstConstant { value: 3 },
+                    }),
+                }),
+            },
         };
-        let mut instructions : Vec<TackyInstruction> = Vec::new();
+        let mut instructions: Vec<TackyInstruction> = Vec::new();
         emit.emit_return(&ast_return, &mut instructions);
         assert_eq!(instructions.len(), 3);
         let instruction = instructions.get(0).unwrap();
@@ -276,9 +293,9 @@ mod tests {
             body: AstStatement {
                 return_exp: AstReturn {
                     expression: AstExpression::Constant {
-                        constant: AstConstant { value: 3},
-                    }
-                }
+                        constant: AstConstant { value: 3 },
+                    },
+                },
             },
         };
 
@@ -302,11 +319,11 @@ mod tests {
                 body: AstStatement {
                     return_exp: AstReturn {
                         expression: AstExpression::Constant {
-                            constant: AstConstant { value: 3},
-                        }
-                    }
-                }
-            }
+                            constant: AstConstant { value: 3 },
+                        },
+                    },
+                },
+            },
         };
 
         let result = emit.emit_program(&program);

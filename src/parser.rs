@@ -8,17 +8,18 @@ use crate::ast_model::unary::AstUnaryOp;
 use crate::lexer::Lexer;
 
 pub struct Parser {
-
-    regex : regex::Regex
+    regex: regex::Regex,
 }
 
 impl Parser {
     pub fn new() -> Self {
-        Self { regex: Lexer::identifier_regex() }
+        Self {
+            regex: Lexer::identifier_regex(),
+        }
     }
     pub fn parse_program(&self, tokens: &mut Vec<String>) -> Result<AstProgram, String> {
         if let Ok(function) = self.parse_function(tokens) {
-            Ok( AstProgram {function})
+            Ok(AstProgram { function })
         } else {
             Err("Invalid program".to_string())
         }
@@ -31,14 +32,17 @@ impl Parser {
             let token = tokens.get(0).unwrap();
             if let Ok(value) = token.parse::<i32>() {
                 tokens.remove(0);
-                Ok(AstConstant {value})
+                Ok(AstConstant { value })
             } else {
                 Err("Invalid constant".to_string())
             }
         }
     }
 
-    pub(crate) fn parse_expression(&self, tokens: &mut Vec<String>) -> Result<AstExpression, String> {
+    pub(crate) fn parse_expression(
+        &self,
+        tokens: &mut Vec<String>,
+    ) -> Result<AstExpression, String> {
         if let Ok(constant) = self.parse_constant(tokens) {
             Ok(AstExpression::Constant { constant: constant })
         } else if tokens[0] == "~" || tokens[0] == "-" {
@@ -46,7 +50,7 @@ impl Parser {
                 if let Ok(exp) = self.parse_expression(tokens) {
                     Ok(AstExpression::Unary {
                         unary_op: op,
-                        expression: Box::new(exp)
+                        expression: Box::new(exp),
                     })
                 } else {
                     Err("Invalid unary operator".to_string())
@@ -76,7 +80,7 @@ impl Parser {
         match token.as_str() {
             "~" => Ok(AstUnaryOp::BitwiseComplement),
             "-" => Ok(AstUnaryOp::Negate),
-            _ => Err(format!("Invalid unary operator: {}", &token))
+            _ => Err(format!("Invalid unary operator: {}", &token)),
         }
     }
 
@@ -97,8 +101,7 @@ impl Parser {
                 return Err("Invalid expression".to_string());
             }
             let _ = tokens.remove(0);
-            Ok(AstReturn {expression})
-
+            Ok(AstReturn { expression })
         } else {
             Err("Invalid expression".to_string())
         }
@@ -107,8 +110,7 @@ impl Parser {
     pub(crate) fn parse_statement(&self, tokens: &mut Vec<String>) -> Result<AstStatement, String> {
         let result = self.parse_return(tokens);
         if let Ok(return_exp) = result {
-            Ok(AstStatement {return_exp})
-
+            Ok(AstStatement { return_exp })
         } else {
             Err("Invalid expression".to_string())
         }
@@ -116,32 +118,32 @@ impl Parser {
 
     // <function> ::= "int" <identifier> "(" "void" ")" "{" <statement> "}"
     pub(crate) fn parse_function(&self, tokens: &mut Vec<String>) -> Result<AstFunction, String> {
-        if ! Self::check_token(tokens, "int") {
+        if !Self::check_token(tokens, "int") {
             return Err("nope".to_string());
         }
         let _ = tokens.remove(0);
 
         let identifier = tokens.remove(0);
-        if ! self.check_identifier(&identifier) {
+        if !self.check_identifier(&identifier) {
             return Err("Invalid identifier".to_string());
         }
 
-        if ! Self::check_token(tokens, "(") {
+        if !Self::check_token(tokens, "(") {
             return Err("nope".to_string());
         }
         let _ = tokens.remove(0);
 
-        if ! Self::check_token(tokens, "void") {
+        if !Self::check_token(tokens, "void") {
             return Err("nope".to_string());
         }
         let _ = tokens.remove(0);
 
-        if ! Self::check_token(tokens, ")") {
+        if !Self::check_token(tokens, ")") {
             return Err("nope".to_string());
         }
         let _ = tokens.remove(0);
 
-        if ! Self::check_token(tokens, "{") {
+        if !Self::check_token(tokens, "{") {
             return Err("nope".to_string());
         }
         let _ = tokens.remove(0);
@@ -151,13 +153,13 @@ impl Parser {
             return Err("nope".to_string());
         }
 
-        if ! Self::check_token(tokens, "}") {
+        if !Self::check_token(tokens, "}") {
             return Err("nope".to_string());
         }
         let _ = tokens.remove(0);
 
         let body = result.unwrap();
-        Ok(AstFunction {identifier, body})
+        Ok(AstFunction { identifier, body })
     }
 
     fn check_token(tokens: &mut Vec<String>, token: &str) -> bool {
@@ -167,7 +169,7 @@ impl Parser {
         tokens[0] == token
     }
 
-    fn check_identifier(&self, token : &String) -> bool {
+    fn check_identifier(&self, token: &String) -> bool {
         if token.len() == 0 {
             return false;
         }
@@ -182,7 +184,7 @@ mod tests {
     #[test]
     fn test_constant_parser() {
         let parser = Parser::new();
-        let mut tokens = vec![ "123".to_string()];
+        let mut tokens = vec!["123".to_string()];
 
         let constant = parser.parse_constant(&mut tokens);
         assert_eq!(constant.is_ok(), true);
@@ -200,7 +202,7 @@ mod tests {
     #[test]
     fn test_constant_expression_parser() {
         let parser = Parser::new();
-        let mut tokens = vec![ "123".to_string()];
+        let mut tokens = vec!["123".to_string()];
 
         let expression = parser.parse_expression(&mut tokens);
         assert_eq!(expression.is_ok(), true);
@@ -209,24 +211,28 @@ mod tests {
                 assert_eq!(cst.value, 123);
                 return;
             }
-            _ => panic!("Invalid expression")
+            _ => panic!("Invalid expression"),
         }
     }
 
     #[test]
     fn test_unary_expression_parser() {
         let parser = Parser::new();
-        let mut tokens = vec![ "~".to_string(), "123".to_string()];
+        let mut tokens = vec!["~".to_string(), "123".to_string()];
 
         let expression = parser.parse_expression(&mut tokens);
         assert_eq!(expression.is_ok(), true);
-        if let AstExpression::Unary { unary_op: op, expression: exp } = expression.unwrap() {
+        if let AstExpression::Unary {
+            unary_op: op,
+            expression: exp,
+        } = expression.unwrap()
+        {
             assert_eq!(op, AstUnaryOp::BitwiseComplement);
             match exp.as_ref() {
                 AstExpression::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
-                },
-                _ => panic!("Invalid expression")
+                }
+                _ => panic!("Invalid expression"),
             }
 
             return;
@@ -238,17 +244,21 @@ mod tests {
     #[test]
     fn test_unary_negate_parser() {
         let parser = Parser::new();
-        let mut tokens = vec![ "-".to_string(), "123".to_string()];
+        let mut tokens = vec!["-".to_string(), "123".to_string()];
 
         let expression = parser.parse_expression(&mut tokens);
         assert_eq!(expression.is_ok(), true);
-        if let AstExpression::Unary { unary_op: op, expression: exp } = expression.unwrap() {
+        if let AstExpression::Unary {
+            unary_op: op,
+            expression: exp,
+        } = expression.unwrap()
+        {
             assert_eq!(op, AstUnaryOp::Negate);
             match exp.as_ref() {
                 AstExpression::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
-                },
-                _ => panic!("Invalid expression")
+                }
+                _ => panic!("Invalid expression"),
             }
 
             return;
@@ -260,12 +270,24 @@ mod tests {
     #[test]
     fn test_multi_unary_negate_parser() {
         let parser = Parser::new();
-        let mut tokens = vec![ "-".to_string(),"(".to_string(),"~".to_string(), "123".to_string(), ")".to_string()];
+        let mut tokens = vec![
+            "-".to_string(),
+            "(".to_string(),
+            "~".to_string(),
+            "123".to_string(),
+            ")".to_string(),
+        ];
 
         let expression = parser.parse_expression(&mut tokens);
         if let Ok(exp1) = expression
-            && let AstExpression::Unary { unary_op: negate1, expression: sub_exp } = exp1
-            && let AstExpression::Unary { unary_op: bitwise_complement, expression: sub_exp2 } = sub_exp.as_ref()
+            && let AstExpression::Unary {
+                unary_op: negate1,
+                expression: sub_exp,
+            } = exp1
+            && let AstExpression::Unary {
+                unary_op: bitwise_complement,
+                expression: sub_exp2,
+            } = sub_exp.as_ref()
             && let AstExpression::Constant { constant: cst } = sub_exp2.as_ref()
         {
             assert_eq!(negate1, AstUnaryOp::Negate);
@@ -280,7 +302,7 @@ mod tests {
     #[test]
     fn test_expression_parser_error() {
         let parser = Parser::new();
-        let mut tokens = vec![ "return".to_string()];
+        let mut tokens = vec!["return".to_string()];
         let expression = parser.parse_expression(&mut tokens);
         assert_eq!(expression.is_err(), true);
     }
@@ -288,7 +310,7 @@ mod tests {
     #[test]
     fn test_return_parser() {
         let parser = Parser::new();
-        let mut tokens = vec![ "return".to_string(), "123".to_string(), ";".to_string()];
+        let mut tokens = vec!["return".to_string(), "123".to_string(), ";".to_string()];
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), true);
         match result.unwrap().expression {
@@ -296,14 +318,14 @@ mod tests {
                 assert_eq!(cst.value, 123);
                 return;
             }
-            _ => panic!("Invalid expression")
+            _ => panic!("Invalid expression"),
         }
     }
 
     #[test]
     fn test_return_parser_error() {
         let parser = Parser::new();
-        let mut tokens = vec![ "123".to_string(), ";".to_string()];
+        let mut tokens = vec!["123".to_string(), ";".to_string()];
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), false);
     }
@@ -311,7 +333,7 @@ mod tests {
     #[test]
     fn test_return_parser_error_2() {
         let parser = Parser::new();
-        let mut tokens = vec!["return".to_string(),  ";".to_string()];
+        let mut tokens = vec!["return".to_string(), ";".to_string()];
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), false);
     }
@@ -319,7 +341,7 @@ mod tests {
     #[test]
     fn test_return_parser_error_3() {
         let parser = Parser::new();
-        let mut tokens = vec!["return".to_string(),  "132".to_string()];
+        let mut tokens = vec!["return".to_string(), "132".to_string()];
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), false);
     }
@@ -327,7 +349,7 @@ mod tests {
     #[test]
     fn test_statement_parser() {
         let parser = Parser::new();
-        let mut tokens = vec![ "return".to_string(), "123".to_string(), ";".to_string()];
+        let mut tokens = vec!["return".to_string(), "123".to_string(), ";".to_string()];
         let result = parser.parse_statement(&mut tokens);
         assert_eq!(result.is_ok(), true);
         match result.unwrap().return_exp.expression {
@@ -335,15 +357,25 @@ mod tests {
                 assert_eq!(cst.value, 123);
                 return;
             }
-            _ => panic!("Invalid expression")
+            _ => panic!("Invalid expression"),
         }
     }
 
     #[test]
     fn test_function_parser() {
         let parser = Parser::new();
-        let mut tokens = vec![ "int".to_string(), "main".to_string(), "(".to_string(), "void".to_string(), ")".to_string(), "{".to_string(),
-                           "return".to_string(), "2".to_string(), ";".to_string(), "}".to_string()];
+        let mut tokens = vec![
+            "int".to_string(),
+            "main".to_string(),
+            "(".to_string(),
+            "void".to_string(),
+            ")".to_string(),
+            "{".to_string(),
+            "return".to_string(),
+            "2".to_string(),
+            ";".to_string(),
+            "}".to_string(),
+        ];
 
         let result = parser.parse_function(&mut tokens);
         assert_eq!(result.is_ok(), true);
@@ -353,16 +385,26 @@ mod tests {
             AstExpression::Constant { constant: cst } => {
                 assert_eq!(cst.value, 2);
             }
-            _ => panic!("Invalid expression")
+            _ => panic!("Invalid expression"),
         }
         assert_eq!(function.identifier, "main".to_string());
     }
-    
+
     #[test]
     fn test_program_parser() {
         let parser = Parser::new();
-        let mut tokens = vec![ "int".to_string(), "main".to_string(), "(".to_string(), "void".to_string(), ")".to_string(), "{".to_string(),
-                           "return".to_string(), "2".to_string(), ";".to_string(), "}".to_string()];
+        let mut tokens = vec![
+            "int".to_string(),
+            "main".to_string(),
+            "(".to_string(),
+            "void".to_string(),
+            ")".to_string(),
+            "{".to_string(),
+            "return".to_string(),
+            "2".to_string(),
+            ";".to_string(),
+            "}".to_string(),
+        ];
 
         let result = parser.parse_program(&mut tokens);
         assert_eq!(result.is_ok(), true);
@@ -371,8 +413,11 @@ mod tests {
         match expression {
             AstExpression::Constant { constant: cst } => {
                 assert_eq!(cst.value, 2);
-            },
-            AstExpression::Unary { unary_op: _, expression: _ } => todo!()
+            }
+            AstExpression::Unary {
+                unary_op: _,
+                expression: _,
+            } => panic!("Invalid expression"),
         }
 
         assert_eq!(function.function.identifier, "main".to_string());
