@@ -121,8 +121,10 @@ impl TackyEmit {
             };
         }
 
-        let (mut new_instructions, stack_frame) = replace_pseudo_registers(&instructions);
-        new_instructions.insert(
+        let (new_instructions, stack_frame) = replace_pseudo_registers(&instructions);
+        let mut fixed_instructions = fix_instructions(&instructions);
+
+        fixed_instructions.insert(
             0,
             Instruction::AllocateStack {
                 size: stack_frame.len() * 4,
@@ -146,6 +148,24 @@ impl TackyEmit {
             unreachable!();
         }
     }
+}
+
+fn fix_instructions(instructions: &Vec<Instruction>) -> Vec::<Instruction> {
+    let mut new_instructions = Vec::<Instruction>::new();
+
+    instructions.into_iter().for_each(|instruction| {
+        let result = instruction.fix_instruction();
+        if result.is_some() {
+            let result = result.unwrap();
+            result.into_iter().for_each(|instruction| {
+                new_instructions.push(instruction);
+            });
+        } else { 
+            new_instructions.push(instruction.clone());
+        }
+    });
+    
+    new_instructions
 }
 
 fn replace_pseudo_registers(instructions: &Vec<Instruction>) -> (Vec<Instruction>, StackFrame) {

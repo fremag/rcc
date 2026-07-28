@@ -44,7 +44,7 @@ impl Parser {
         tokens: &mut Vec<String>,
     ) -> Result<AstExpression, String> {
         if let Ok(constant) = self.parse_constant(tokens) {
-            Ok(AstExpression::Constant { constant: constant })
+            Ok(AstExpression::Constant { constant })
         } else if tokens[0] == "~" || tokens[0] == "-" {
             if let Ok(op) = self.parse_unop(tokens) {
                 if let Ok(exp) = self.parse_expression(tokens) {
@@ -365,17 +365,17 @@ mod tests {
     fn test_function_parser() {
         let parser = Parser::new();
         let mut tokens = vec![
-            "int".to_string(),
-            "main".to_string(),
-            "(".to_string(),
-            "void".to_string(),
-            ")".to_string(),
-            "{".to_string(),
-            "return".to_string(),
-            "2".to_string(),
-            ";".to_string(),
-            "}".to_string(),
-        ];
+            "int",
+            "main",
+            "(",
+            "void",
+            ")",
+            "{",
+            "return",
+            "2",
+            ";",
+            "}"
+        ].iter().map(|s| s.to_string()).collect();
 
         let result = parser.parse_function(&mut tokens);
         assert_eq!(result.is_ok(), true);

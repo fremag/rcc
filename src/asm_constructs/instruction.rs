@@ -1,5 +1,7 @@
-use crate::asm_constructs::operand::Operand;
+use crate::asm_constructs::operand::{Operand, Reg};
 use std::collections::HashMap;
+use Operand::Register;
+use crate::asm_constructs::instruction::Instruction::Mov;
 
 #[derive(Debug, Clone)]
 pub enum UnaryOperator {
@@ -66,6 +68,25 @@ impl Instruction {
             Instruction::Ret => Instruction::Ret,
         }
     }
+
+    pub(crate) fn fix_instruction(&self) -> Option<Vec<Instruction>> {
+        match self {
+            Mov {src, dest} => {
+                match (src, dest) {
+                    (Register {reg: reg_src }, Register {reg: reg_dest }) => {
+                        Some(vec![
+                            Mov {src: Register {reg: reg_src.clone()}, dest: Register {reg: Reg::R10}},
+                            Mov {src: Register {reg: Reg::R10}, dest: Register {reg: reg_dest.clone()}},
+                        ])
+                    }
+                    (_, _) => None
+                }
+
+            },
+            _ => None
+        }
+    }
+
 }
 
 pub struct StackFrame {
@@ -92,5 +113,136 @@ impl StackFrame {
                 n
             }
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_allocate_stack_to_code() {
+        let instr = Instruction::AllocateStack { size: 16 };
+        assert_eq!(instr.to_code(), "sub rsp, 16\n");
+    }
+
+    #[test]
+    fn test_mov_to_code() {
+        let instr = Instruction::Mov {
+            src: Operand::Imm { value: 42 },
+            dest: Operand::Register { reg: Reg::AX },
+        };
+        assert_eq!(instr.to_code(), "movl $42, %eax\n");
+    }
+
+    #[test]
+    fn test_unary_neg_to_code() {
+        let instr = Instruction::Unary {
+            unary_operator: UnaryOperator::Neg,
+            operand: Operand::Register { reg: Reg::AX },
+        };
+        assert_eq!(instr.to_code(), "neg1 %eax\n");
+    }
+
+    #[test]
+    fn test_unary_not_to_code() {
+        let instr = Instruction::Unary {
+            unary_operator: UnaryOperator::Not,
+            operand: Operand::Register { reg: Reg::R10 },
+        };
+        assert_eq!(instr.to_code(), "not1 %r10d\n");
+    }
+
+    #[test]
+    fn test_ret_to_code() {
+        let instr = Instruction::Ret;
+        assert_eq!(instr.to_code(), "movq %rbp, %rsp\n\tpopq %rbp\n\tret\n");
+    }
+
+    #[test]
+    fn test_fix_pseudo_registers_mov() {
+        let mut stack_frame = StackFrame::new();
+        let instr = Instruction::Mov {
+            src: Operand::Pseudo { identifier: "var1".to_string() },
+            dest: Operand::Register { reg: Reg::AX },
+        };
+        let fixed = instr.fix_pseudo_registers(&mut stack_frame);
+
+        match fixed {
+            Instruction::Mov { src, dest } => {
+                match src {
+                    Operand::Stack { offset } => assert_eq!(offset, 1),
+                    _ => panic!("Expected Stack operand"),
+                }
+                match dest {
+                    Operand::Register { reg } => assert!(matches!(reg, Reg::AX)),
+                    _ => panic!("Expected Register operand"),
+                }
+            }
+            _ => panic!("Expected Mov instruction"),
+        }
+    }
+
+    #[test]
+    fn test_fix_instruction_register_to_register() {
+        let instr = Instruction::Mov {
+            src: Operand::Register { reg: Reg::AX },
+            dest: Operand::Register { reg: Reg::AX },
+        };
+        let fixed = instr.fix_instruction();
+
+        assert!(fixed.is_some());
+        let instructions = fixed.unwrap();
+        assert_eq!(instructions.len(), 2);
+        assert_eq!(instructions[0].to_code(), "movl %eax, %r10d\n");
+        assert_eq!(instructions[1].to_code(), "movl %r10d, %eax\n");
+    }
+
+    #[test]
+    fn test_fix_instruction_non_register_mov() {
+        let instr = Instruction::Mov {
+            src: Operand::Imm { value: 42 },
+            dest: Operand::Register { reg: Reg::AX },
+        };
+        let fixed = instr.fix_instruction();
+        assert!(fixed.is_none());
+    }
+
+    #[test]
+    fn test_stack_frame_new() {
+        let stack_frame = StackFrame::new();
+        assert_eq!(stack_frame.len(), 0);
+    }
+
+    #[test]
+    fn test_stack_frame_get_same_key() {
+        let mut stack_frame = StackFrame::new();
+        let offset1 = stack_frame.get("tmp.1");
+        let offset2 = stack_frame.get("tmp.1");
+        assert_eq!(offset1, offset2);
+        assert_eq!(offset1, 1);
+    }
+
+    #[test]
+    fn test_stack_frame_get_different_keys() {
+        let mut stack_frame = StackFrame::new();
+        let offset1 = stack_frame.get("tmp.1");
+        let offset2 = stack_frame.get("tmp.2");
+        assert_ne!(offset1, offset2);
+        assert_eq!(offset1, 1);
+        assert_eq!(offset2, 2);
+    }
+
+    #[test]
+    fn test_stack_frame_len() {
+        let mut stack_frame = StackFrame::new();
+        assert_eq!(stack_frame.len(), 0);
+        stack_frame.get("tmp.1");
+        assert_eq!(stack_frame.len(), 1);
+        stack_frame.get("tmp.2");
+        assert_eq!(stack_frame.len(), 2);
+        stack_frame.get("tmp.1"); // Same key, shouldn't increase length
+        assert_eq!(stack_frame.len(), 2);
     }
 }
