@@ -146,7 +146,7 @@ mod tests {
             unary_operator: UnaryOperator::Neg,
             operand: Operand::Register { reg: Reg::AX },
         };
-        assert_eq!(instr.to_code(), "neg1 %eax");
+        assert_eq!(instr.to_code(), "negl %eax");
     }
 
     #[test]
@@ -155,7 +155,7 @@ mod tests {
             unary_operator: UnaryOperator::Not,
             operand: Operand::Register { reg: Reg::R10 },
         };
-        assert_eq!(instr.to_code(), "not1 %r10d");
+        assert_eq!(instr.to_code(), "notl %r10d");
     }
 
     #[test]
@@ -209,8 +209,8 @@ mod tests {
 
         assert!(fixed.is_some());
         let two_instructions = fixed.unwrap();
-        assert_eq!(two_instructions[0].to_code(), "movl 8(%rbp), %r10d");
-        assert_eq!(two_instructions[1].to_code(), "movl %r10d, 12(%rbp)");
+        assert_eq!(two_instructions[0].to_code(), "movl -8(%rbp), %r10d");
+        assert_eq!(two_instructions[1].to_code(), "movl %r10d, -12(%rbp)");
     }
 
     #[test]
