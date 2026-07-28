@@ -29,7 +29,7 @@ pub enum Instruction {
 impl Instruction {
     pub fn to_code(&self) -> String {
         match self {
-            Instruction::AllocateStack { size } => format!("sub rsp, {}", size),
+            Instruction::AllocateStack { size } => format!("subq ${}, %rsp", size),
             Instruction::Mov { src, dest } => {
                 format!("movl {}, {}", src.to_code(), dest.to_code())
             }
@@ -38,8 +38,8 @@ impl Instruction {
                 operand,
             } => {
                 let unary = match unary_operator {
-                    UnaryOperator::Neg => "neg1",
-                    UnaryOperator::Not => "not1",
+                    UnaryOperator::Neg => "negl",
+                    UnaryOperator::Not => "notl",
                 };
                 format!("{} {}", unary, operand.to_code())
             }
@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn test_allocate_stack_to_code() {
         let instr = Instruction::AllocateStack { size: 16 };
-        assert_eq!(instr.to_code(), "sub rsp, 16");
+        assert_eq!(instr.to_code(), "subq $16, %rsp");
     }
 
     #[test]

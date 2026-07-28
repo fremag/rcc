@@ -9,8 +9,8 @@ pub struct FunctionDefinition {
 impl FunctionDefinition {
     pub(crate) fn to_code(&self) -> String {
         let mut asm_code = format!(
-            "\t.globl {}\n{}:\n\tpushq %rbp\n\tmovq {}%rsp, %rbp\n",
-            self.identifier, self.identifier, "{@}"
+            "\t.globl {}\n{}:\n\tpushq %rbp\n\tmovq %rsp, %rbp\n",
+            self.identifier, self.identifier
         );
         for instruction in &self.instructions {
             let inst_code = instruction.to_code();
