@@ -119,7 +119,9 @@ fn main() -> Result<(), std::io::Error> {
     println!("{asm_code}");
 
     let asm_file = change_extension(input_file, "s");
-    fs::write(asm_file, asm_code).expect("Should have been able to write the file");
+    let bak_file = change_extension(input_file, "b");
+    fs::write(asm_file, &asm_code).expect("Should have been able to write the file");
+    fs::write(bak_file, &asm_code).expect("Should have been able to write the file");
     let exe_file = change_extension(input_file, "");
     let command =
         run_codegen("/usr/bin/gcc", input_file, &exe_file).expect("failed to execute process");

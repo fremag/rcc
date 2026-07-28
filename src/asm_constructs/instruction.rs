@@ -2,6 +2,7 @@ use crate::asm_constructs::operand::{Operand, Reg};
 use std::collections::HashMap;
 use Operand::Register;
 use crate::asm_constructs::instruction::Instruction::Mov;
+use crate::asm_constructs::operand::Operand::Stack;
 
 #[derive(Debug, Clone)]
 pub enum UnaryOperator {
@@ -28,9 +29,9 @@ pub enum Instruction {
 impl Instruction {
     pub fn to_code(&self) -> String {
         match self {
-            Instruction::AllocateStack { size } => format!("sub rsp, {}\n", size),
+            Instruction::AllocateStack { size } => format!("sub rsp, {}", size),
             Instruction::Mov { src, dest } => {
-                format!("movl {}, {}\n", src.to_code(), dest.to_code())
+                format!("movl {}, {}", src.to_code(), dest.to_code())
             }
             Instruction::Unary {
                 unary_operator,
@@ -40,9 +41,9 @@ impl Instruction {
                     UnaryOperator::Neg => "neg1",
                     UnaryOperator::Not => "not1",
                 };
-                format!("{} {}\n", unary, operand.to_code())
+                format!("{} {}", unary, operand.to_code())
             }
-            Instruction::Ret => String::from("movq %rbp, %rsp\n\tpopq %rbp\n\tret\n"),
+            Instruction::Ret => String::from("movq %rbp, %rsp\n\tpopq %rbp\n\tret"),
         }
     }
 
@@ -60,9 +61,12 @@ impl Instruction {
             Instruction::Unary {
                 unary_operator,
                 operand,
-            } => Instruction::Unary {
-                unary_operator: unary_operator.clone(),
-                operand: operand.clone(),
+            } => {
+                let new_operand = operand.fix_pseudo_registers(pseudo_registers);
+                Instruction::Unary {
+                    unary_operator: unary_operator.clone(),
+                    operand: new_operand,
+                }
             },
             Instruction::AllocateStack { size } => Instruction::AllocateStack { size: *size },
             Instruction::Ret => Instruction::Ret,
@@ -73,10 +77,10 @@ impl Instruction {
         match self {
             Mov {src, dest} => {
                 match (src, dest) {
-                    (Register {reg: reg_src }, Register {reg: reg_dest }) => {
+                    (Stack {offset : offset_src }, Stack {offset: offset_dest}) => {
                         Some(vec![
-                            Mov {src: Register {reg: reg_src.clone()}, dest: Register {reg: Reg::R10}},
-                            Mov {src: Register {reg: Reg::R10}, dest: Register {reg: reg_dest.clone()}},
+                            Mov {src: Stack {offset: *offset_src}, dest: Register {reg: Reg::R10}},
+                            Mov {src: Register {reg: Reg::R10}, dest: Stack {offset: *offset_dest}},
                         ])
                     }
                     (_, _) => None
@@ -106,11 +110,11 @@ impl StackFrame {
 
     pub fn get(&mut self, key: &str) -> usize {
         match self.items.get(key) {
-            Some(value) => *value,
+            Some(value) => *value * 4,
             None => {
                 let n = self.items.len() + 1;
                 self.items.insert(key.to_string(), n);
-                n
+                4*n
             }
         }
     }
@@ -124,7 +128,7 @@ mod tests {
     #[test]
     fn test_allocate_stack_to_code() {
         let instr = Instruction::AllocateStack { size: 16 };
-        assert_eq!(instr.to_code(), "sub rsp, 16\n");
+        assert_eq!(instr.to_code(), "sub rsp, 16");
     }
 
     #[test]
@@ -133,7 +137,7 @@ mod tests {
             src: Operand::Imm { value: 42 },
             dest: Operand::Register { reg: Reg::AX },
         };
-        assert_eq!(instr.to_code(), "movl $42, %eax\n");
+        assert_eq!(instr.to_code(), "movl $42, %eax");
     }
 
     #[test]
@@ -142,7 +146,7 @@ mod tests {
             unary_operator: UnaryOperator::Neg,
             operand: Operand::Register { reg: Reg::AX },
         };
-        assert_eq!(instr.to_code(), "neg1 %eax\n");
+        assert_eq!(instr.to_code(), "neg1 %eax");
     }
 
     #[test]
@@ -151,13 +155,13 @@ mod tests {
             unary_operator: UnaryOperator::Not,
             operand: Operand::Register { reg: Reg::R10 },
         };
-        assert_eq!(instr.to_code(), "not1 %r10d\n");
+        assert_eq!(instr.to_code(), "not1 %r10d");
     }
 
     #[test]
     fn test_ret_to_code() {
         let instr = Instruction::Ret;
-        assert_eq!(instr.to_code(), "movq %rbp, %rsp\n\tpopq %rbp\n\tret\n");
+        assert_eq!(instr.to_code(), "movq %rbp, %rsp\n\tpopq %rbp\n\tret");
     }
 
     #[test]
@@ -172,7 +176,7 @@ mod tests {
         match fixed {
             Instruction::Mov { src, dest } => {
                 match src {
-                    Operand::Stack { offset } => assert_eq!(offset, 1),
+                    Operand::Stack { offset } => assert_eq!(offset, 4),
                     _ => panic!("Expected Stack operand"),
                 }
                 match dest {
@@ -192,11 +196,21 @@ mod tests {
         };
         let fixed = instr.fix_instruction();
 
+        assert!(fixed.is_none());
+    }
+
+    #[test]
+    fn test_fix_instruction_stack_to_stack() {
+        let instr = Instruction::Mov {
+            src: Operand::Stack { offset: 8 },
+            dest: Operand::Stack { offset: 12 },
+        };
+        let fixed = instr.fix_instruction();
+
         assert!(fixed.is_some());
-        let instructions = fixed.unwrap();
-        assert_eq!(instructions.len(), 2);
-        assert_eq!(instructions[0].to_code(), "movl %eax, %r10d\n");
-        assert_eq!(instructions[1].to_code(), "movl %r10d, %eax\n");
+        let two_instructions = fixed.unwrap();
+        assert_eq!(two_instructions[0].to_code(), "movl 8(%rbp), %r10d");
+        assert_eq!(two_instructions[1].to_code(), "movl %r10d, 12(%rbp)");
     }
 
     #[test]
@@ -221,7 +235,7 @@ mod tests {
         let offset1 = stack_frame.get("tmp.1");
         let offset2 = stack_frame.get("tmp.1");
         assert_eq!(offset1, offset2);
-        assert_eq!(offset1, 1);
+        assert_eq!(offset1, 4);
     }
 
     #[test]
@@ -230,8 +244,8 @@ mod tests {
         let offset1 = stack_frame.get("tmp.1");
         let offset2 = stack_frame.get("tmp.2");
         assert_ne!(offset1, offset2);
-        assert_eq!(offset1, 1);
-        assert_eq!(offset2, 2);
+        assert_eq!(offset1, 4);
+        assert_eq!(offset2, 8);
     }
 
     #[test]

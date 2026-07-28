@@ -122,7 +122,7 @@ impl TackyEmit {
         }
 
         let (new_instructions, stack_frame) = replace_pseudo_registers(&instructions);
-        let mut fixed_instructions = fix_instructions(&instructions);
+        let mut fixed_instructions = fix_instructions(&new_instructions);
 
         fixed_instructions.insert(
             0,
@@ -133,7 +133,7 @@ impl TackyEmit {
 
         FunctionDefinition {
             identifier: function.identifier.clone(),
-            instructions: new_instructions,
+            instructions: fixed_instructions,
         }
     }
 
@@ -160,11 +160,11 @@ fn fix_instructions(instructions: &Vec<Instruction>) -> Vec::<Instruction> {
             result.into_iter().for_each(|instruction| {
                 new_instructions.push(instruction);
             });
-        } else { 
+        } else {
             new_instructions.push(instruction.clone());
         }
     });
-    
+
     new_instructions
 }
 
