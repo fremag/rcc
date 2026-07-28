@@ -24,7 +24,7 @@ impl Operand {
                 Reg::AX => String::from("%eax"),
                 Reg::R10 => String::from("%r10d"),
             },
-            Operand::Stack { offset } => format!("{}(%rbp)", offset),
+            Operand::Stack { offset } => format!("-{}(%rbp)", offset),
         }
     }
 
