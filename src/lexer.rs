@@ -44,15 +44,16 @@ impl Lexer {
     pub fn kw_semi_colon_regex() -> regex::Regex {
         regex::Regex::new(r"^(?<item>;)").unwrap()
     }
-    pub fn kw_bitwise_complement_op_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<item>~)").unwrap()
-    }
+    pub fn kw_bitwise_complement_op_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>~)").unwrap() }
     pub fn kw_negation_op_regex() -> regex::Regex {
         regex::Regex::new(r"^(?<item>-)").unwrap()
     }
-    pub fn kw_two_dec_op_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<item>--)").unwrap()
-    }
+    pub fn kw_two_dec_op_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>--)").unwrap() }
+
+    pub fn kw_bin_op_add_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>\+)").unwrap() }
+    pub fn kw_bin_op_mul_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>\*)").unwrap() }
+    pub fn kw_bin_op_div_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>/)").unwrap() }
+    pub fn kw_bin_op_mod_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>%)").unwrap() }
 
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
@@ -72,6 +73,10 @@ impl Lexer {
             Lexer::kw_bitwise_complement_op_regex(),
             Lexer::kw_negation_op_regex(),
             Lexer::kw_two_dec_op_regex(),
+            Lexer::kw_bin_op_add_regex(),
+            Lexer::kw_bin_op_mul_regex(),
+            Lexer::kw_bin_op_div_regex(),
+            Lexer::kw_bin_op_mod_regex(),
         ];
         let mut tokens = Vec::new();
         let mut i = 0;
@@ -298,6 +303,46 @@ mod tests {
     #[test_case("c", "int f() { return 5; };", "xxx")]
     fn two_dec_op_regex(_name: &str, value: &str, expected: &str) {
         let re = Lexer::kw_two_dec_op_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "+", "+")]
+    fn bin_op_add_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bin_op_add_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "*", "*")]
+    fn bin_op_mul_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bin_op_mul_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "/", "/")]
+    fn bin_op_div_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bin_op_div_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "%", "%")]
+    fn bin_op_mod_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bin_op_mod_regex();
         let x = match re.captures(value) {
             None => "xxx",
             Some(caps) => caps.name("item").unwrap().as_str(),
