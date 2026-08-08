@@ -1,6 +1,6 @@
 use crate::ast_model::ast_return::AstReturn;
 use crate::ast_model::constant::AstConstant;
-use crate::ast_model::expression::AstExpression;
+use crate::ast_model::expression::{AstExpression, AstFactor};
 use crate::ast_model::function::AstFunction;
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::statement::AstStatement;
@@ -39,18 +39,16 @@ impl Parser {
         }
     }
 
-    pub(crate) fn parse_expression(
-        &self,
-        tokens: &mut Vec<String>,
-    ) -> Result<AstExpression, String> {
+    pub(crate) fn parse_factor(&self, tokens: &mut Vec<String>) -> Result<AstFactor, String> {
         if let Ok(constant) = self.parse_constant(tokens) {
-            Ok(AstExpression::Constant { constant })
+            let f = AstFactor::Constant { constant };
+            Ok(f)
         } else if tokens[0] == "~" || tokens[0] == "-" {
             if let Ok(op) = self.parse_unop(tokens) {
-                if let Ok(exp) = self.parse_expression(tokens) {
-                    Ok(AstExpression::Unary {
+                if let Ok(inner_exp) = self.parse_factor(tokens) {
+                    Ok(AstFactor::Unary {
                         unary_op: op,
-                        expression: Box::new(exp),
+                        factor: Box::new(inner_exp),
                     })
                 } else {
                     Err("Invalid unary operator".to_string())
@@ -65,11 +63,34 @@ impl Parser {
                 if token != ")" {
                     Err("Invalid expression".to_string())
                 } else {
-                    Ok(inner_exp)
+                    Ok(AstFactor::Nested(Box::new(inner_exp)))
                 }
             } else {
                 Err("Invalid expression".to_string())
             }
+        } else {
+            Err(format!("Invalid factor: {}", &tokens[0]))
+        }
+    }
+
+    pub(crate) fn parse_expression(
+        &self,
+        tokens: &mut Vec<String>,
+    ) -> Result<AstExpression, String> {
+        if let Ok(left_factor) = self.parse_factor(tokens) {
+            let mut left = AstExpression::Factor(left_factor);
+            while Self::check_token(tokens, "+")
+                || Self::check_token(tokens, "-") {
+                let binop = self.parse_binop(tokens);
+                let right_factor = self.parse_factor(tokens);
+                if let Ok(right_factor) = right_factor {
+
+                    let left_exp = Box::new(left);
+                    let right_exp = Box::new(AstExpression::Factor(right_factor));
+                    left = AstExpression::Binary {binop, left: left_exp , right: right_exp };
+                }
+            }
+            Ok(left)
         } else {
             Err("Invalid expression".to_string())
         }
@@ -175,6 +196,10 @@ impl Parser {
         }
         self.regex.is_match(&token)
     }
+
+    fn parse_binop(&self, p0: &mut Vec<String>) -> String {
+        todo!()
+    }
 }
 
 #[cfg(test)]
@@ -200,14 +225,14 @@ mod tests {
     }
 
     #[test]
-    fn test_constant_expression_parser() {
+    fn test_constant_factor_parser() {
         let parser = Parser::new();
         let mut tokens = vec!["123".to_string()];
 
-        let expression = parser.parse_expression(&mut tokens);
-        assert_eq!(expression.is_ok(), true);
-        match expression.unwrap() {
-            AstExpression::Constant { constant: cst } => {
+        let factor = parser.parse_factor(&mut tokens);
+        assert_eq!(factor.is_ok(), true);
+        match factor.unwrap() {
+            AstFactor::Constant { constant: cst } => {
                 assert_eq!(cst.value, 123);
                 return;
             }
@@ -216,20 +241,20 @@ mod tests {
     }
 
     #[test]
-    fn test_unary_expression_parser() {
+    fn test_unary_factor_parser() {
         let parser = Parser::new();
         let mut tokens = vec!["~".to_string(), "123".to_string()];
 
-        let expression = parser.parse_expression(&mut tokens);
-        assert_eq!(expression.is_ok(), true);
-        if let AstExpression::Unary {
+        let factor = parser.parse_factor(&mut tokens);
+        assert_eq!(factor.is_ok(), true);
+        if let AstFactor::Unary {
             unary_op: op,
-            expression: exp,
-        } = expression.unwrap()
+            factor: factor,
+        } = factor.unwrap()
         {
             assert_eq!(op, AstUnaryOp::BitwiseComplement);
-            match exp.as_ref() {
-                AstExpression::Constant { constant: cst } => {
+            match factor.as_ref() {
+                AstFactor::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
                 }
                 _ => panic!("Invalid expression"),
@@ -246,16 +271,16 @@ mod tests {
         let parser = Parser::new();
         let mut tokens = vec!["-".to_string(), "123".to_string()];
 
-        let expression = parser.parse_expression(&mut tokens);
-        assert_eq!(expression.is_ok(), true);
-        if let AstExpression::Unary {
+        let factor = parser.parse_factor(&mut tokens);
+        assert_eq!(factor.is_ok(), true);
+        if  let AstFactor::Unary {
             unary_op: op,
-            expression: exp,
-        } = expression.unwrap()
+            factor: factor,
+        } = factor.unwrap()
         {
             assert_eq!(op, AstUnaryOp::Negate);
-            match exp.as_ref() {
-                AstExpression::Constant { constant: cst } => {
+            match factor.as_ref() {
+                AstFactor::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
                 }
                 _ => panic!("Invalid expression"),
@@ -278,17 +303,17 @@ mod tests {
             ")".to_string(),
         ];
 
-        let expression = parser.parse_expression(&mut tokens);
-        if let Ok(exp1) = expression
-            && let AstExpression::Unary {
+        let factor = parser.parse_factor(&mut tokens);
+        if let Ok(exp1) = factor
+            && let AstFactor::Unary {
                 unary_op: negate1,
-                expression: sub_exp,
+                factor: factor1,
             } = exp1
-            && let AstExpression::Unary {
+            && let AstFactor::Unary {
                 unary_op: bitwise_complement,
-                expression: sub_exp2,
-            } = sub_exp.as_ref()
-            && let AstExpression::Constant { constant: cst } = sub_exp2.as_ref()
+                factor: sub_factor2,
+            } = factor1.as_ref()
+            && let AstFactor::Constant { constant: cst } = sub_factor2.as_ref()
         {
             assert_eq!(negate1, AstUnaryOp::Negate);
             assert_eq!(*bitwise_complement, AstUnaryOp::BitwiseComplement);
@@ -298,7 +323,6 @@ mod tests {
             return;
         }
     }
-
     #[test]
     fn test_expression_parser_error() {
         let parser = Parser::new();
@@ -314,9 +338,13 @@ mod tests {
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), true);
         match result.unwrap().expression {
-            AstExpression::Constant { constant: cst } => {
-                assert_eq!(cst.value, 123);
-                return;
+            AstExpression::Factor(factor) => {
+                if let AstFactor::Constant { constant: cst } = factor {
+                    assert_eq!(cst.value, 123);
+                    return;
+                } else {
+                    panic!("Invalid expression")
+                }
             }
             _ => panic!("Invalid expression"),
         }
@@ -345,7 +373,7 @@ mod tests {
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), false);
     }
-
+    
     #[test]
     fn test_statement_parser() {
         let parser = Parser::new();
@@ -353,14 +381,16 @@ mod tests {
         let result = parser.parse_statement(&mut tokens);
         assert_eq!(result.is_ok(), true);
         match result.unwrap().return_exp.expression {
-            AstExpression::Constant { constant: cst } => {
-                assert_eq!(cst.value, 123);
-                return;
+            AstExpression::Factor(factor) => {
+                if let AstFactor::Constant { constant: cst } = factor {
+                    assert_eq!(cst.value, 123);
+                } else {
+                    panic!("Invalid expression")
+                }
             }
             _ => panic!("Invalid expression"),
         }
     }
-
     #[test]
     fn test_function_parser() {
         let parser = Parser::new();
@@ -381,11 +411,11 @@ mod tests {
         assert_eq!(result.is_ok(), true);
         let function = result.unwrap();
         let expression = function.body.return_exp.expression;
-        match expression {
-            AstExpression::Constant { constant: cst } => {
-                assert_eq!(cst.value, 2);
-            }
-            _ => panic!("Invalid expression"),
+        if let AstExpression::Factor(factor) = expression 
+        && let AstFactor::Constant{constant: cst} = factor  {
+            assert_eq!(cst.value, 2);
+        } else {
+            panic!("Invalid expression")
         }
         assert_eq!(function.identifier, "main".to_string());
     }
@@ -410,14 +440,11 @@ mod tests {
         assert_eq!(result.is_ok(), true);
         let function = result.unwrap();
         let expression = function.function.body.return_exp.expression;
-        match expression {
-            AstExpression::Constant { constant: cst } => {
-                assert_eq!(cst.value, 2);
-            }
-            AstExpression::Unary {
-                unary_op: _,
-                expression: _,
-            } => panic!("Invalid expression"),
+        if let AstExpression::Factor(factor) = expression
+        && let AstFactor::Constant { constant: cst } = factor  {
+            assert_eq!(cst.value, 2);
+        } else {
+            panic!("Invalid expression")
         }
 
         assert_eq!(function.function.identifier, "main".to_string());

@@ -2,12 +2,23 @@ use crate::ast_model::constant::AstConstant;
 use crate::ast_model::unary::AstUnaryOp;
 
 #[derive(Debug, Clone)]
-pub enum AstExpression {
+pub enum AstFactor {
     Constant {
         constant: AstConstant,
     },
     Unary {
         unary_op: AstUnaryOp,
-        expression: Box<AstExpression>,
+        factor: Box<AstFactor>,
+    },
+    Nested(Box<AstExpression>),
+}
+
+#[derive(Debug, Clone)]
+pub enum AstExpression {
+    Factor(AstFactor),
+    Binary {
+        left: Box<AstExpression>,
+        binop: String,
+        right: Box<AstExpression>,
     },
 }
