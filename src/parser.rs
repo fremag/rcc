@@ -43,7 +43,7 @@ impl Parser {
         if let Ok(constant) = self.parse_constant(tokens) {
             let f = AstFactor::Constant { constant };
             Ok(f)
-        } else if tokens[0] == "~" || tokens[0] == "-" {
+        } else if Self::check_token(tokens, "~") || Self::check_token(tokens, "-") {
             if let Ok(op) = self.parse_unop(tokens) {
                 if let Ok(inner_exp) = self.parse_factor(tokens) {
                     Ok(AstFactor::Unary {
@@ -197,8 +197,8 @@ impl Parser {
         self.regex.is_match(&token)
     }
 
-    fn parse_binop(&self, p0: &mut Vec<String>) -> String {
-        todo!()
+    fn parse_binop(&self, tokens: &mut Vec<String>) -> String {
+       tokens.remove(0)
     }
 }
 
@@ -373,7 +373,7 @@ mod tests {
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), false);
     }
-    
+
     #[test]
     fn test_statement_parser() {
         let parser = Parser::new();
@@ -411,7 +411,7 @@ mod tests {
         assert_eq!(result.is_ok(), true);
         let function = result.unwrap();
         let expression = function.body.return_exp.expression;
-        if let AstExpression::Factor(factor) = expression 
+        if let AstExpression::Factor(factor) = expression
         && let AstFactor::Constant{constant: cst} = factor  {
             assert_eq!(cst.value, 2);
         } else {
@@ -448,5 +448,71 @@ mod tests {
         }
 
         assert_eq!(function.function.identifier, "main".to_string());
+    }
+
+    #[test]
+    fn test_parse_exp_binary_operator() {
+        let parser = Parser::new();
+        let mut tokens = vec!["1", "+", "2"].iter().map(|s| s.to_string()).collect();
+        let result= parser.parse_expression(&mut tokens);
+        assert_eq!(result.is_ok(), true);
+        if let AstExpression::Binary {binop, left, right} = result.unwrap()
+        && let AstExpression::Factor(right_factor) = right.as_ref()
+        && let AstExpression::Factor(left_factor) = left.as_ref()
+            && let AstFactor::Constant{constant: right_cst} = right_factor
+            && let AstFactor::Constant{constant: left_cst} = left_factor
+        {
+            assert_eq!(left_cst.value, 1);
+            assert_eq!(right_cst.value, 2);
+        } else {
+            panic!("Something failed !")
+        }
+    }
+
+    #[test]
+    fn test_parse_factor_binary_operator_parentheses() {
+        let parser = Parser::new();
+        let mut tokens = vec!["(", "1", "+", "2", ")"].iter().map(|s| s.to_string()).collect();
+        let result= parser.parse_factor(&mut tokens);
+        assert_eq!(result.is_ok(), true);
+        if let AstFactor::Nested(nested) = result.unwrap()
+            && let AstExpression::Binary {binop, left, right} = nested.as_ref()
+            && let AstExpression::Factor(right_factor) = right.as_ref()
+            && let AstExpression::Factor(left_factor) = left.as_ref()
+            && let AstFactor::Constant{constant: right_cst} = right_factor
+            && let AstFactor::Constant{constant: left_cst} = left_factor
+        {
+            assert_eq!(left_cst.value, 1);
+            assert_eq!(right_cst.value, 2);
+        } else {
+            panic!("Something failed !")
+        }
+    }
+
+    #[test]
+    fn test_parse_exp_binary_operator_nested_expression() {
+        let parser = Parser::new();
+        let mut tokens = vec!["1", "+", "(", "2", "-", "3", ")"].iter().map(|s| s.to_string()).collect();
+        let result= parser.parse_expression(&mut tokens);
+        assert_eq!(result.is_ok(), true);
+        if let AstExpression::Binary {binop: binop1, left, right} = result.unwrap()
+            && let AstExpression::Factor(left_factor) = left.as_ref()
+            && let AstExpression::Factor(right_factor) = right.as_ref()
+            && let AstFactor::Constant{constant: left_cst} = left_factor
+            && let AstFactor::Nested(box_nested_exp) = right_factor
+            && let AstExpression::Binary {binop: binop2, left : nested_left, right: nested_right} = box_nested_exp.as_ref()
+            && let AstExpression::Factor(left_nested_factor) = nested_left.as_ref()
+            && let AstExpression::Factor(right_nested_factor) = nested_right.as_ref()
+            && let AstFactor::Constant{constant: left_nested_cst} = left_nested_factor
+            && let AstFactor::Constant{constant: right_nested_cst} = right_nested_factor
+        {
+            assert_eq!(left_cst.value, 1);
+            assert_eq!(left_nested_cst.value, 2);
+            assert_eq!(right_nested_cst.value, 3);
+            assert_eq!(binop1, "+".to_string());
+            assert_eq!(binop2, "-");
+        } else {
+            panic!("Something failed !")
+        }
     }
 }
