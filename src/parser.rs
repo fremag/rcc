@@ -1,6 +1,6 @@
 use crate::ast_model::ast_return::AstReturn;
 use crate::ast_model::constant::AstConstant;
-use crate::ast_model::expression::{AstExpression, AstFactor};
+use crate::ast_model::expression::{AstExpression, AstFactor, BinaryOp};
 use crate::ast_model::function::AstFunction;
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::statement::AstStatement;
@@ -40,6 +40,10 @@ impl Parser {
     }
 
     pub(crate) fn parse_factor(&self, tokens: &mut Vec<String>) -> Result<AstFactor, String> {
+        if tokens.len() == 0 {
+            return Err("Empty token list".to_string())
+        }
+        
         if let Ok(constant) = self.parse_constant(tokens) {
             let f = AstFactor::Constant { constant };
             Ok(f)
@@ -56,9 +60,9 @@ impl Parser {
             } else {
                 Err("Invalid expression".to_string())
             }
-        } else if tokens[0] == "(" {
+        } else if Self::check_token(tokens,"(") {
             tokens.remove(0);
-            if let Ok(inner_exp) = self.parse_expression(tokens) {
+            if let Ok(inner_exp) = self.parse_expression(tokens, 0) {
                 let token = tokens.remove(0);
                 if token != ")" {
                     Err("Invalid expression".to_string())
@@ -76,19 +80,23 @@ impl Parser {
     pub(crate) fn parse_expression(
         &self,
         tokens: &mut Vec<String>,
+        min_prec: i32
     ) -> Result<AstExpression, String> {
         if let Ok(left_factor) = self.parse_factor(tokens) {
             let mut left = AstExpression::Factor(left_factor);
-            while Self::check_token(tokens, "+")
-                || Self::check_token(tokens, "-") {
+            let mut next_token = Self::peek_token(tokens);
+            while Self::is_binary_op(&next_token) && Self::precedence(&next_token) >= min_prec {
                 let binop = self.parse_binop(tokens);
-                let right_factor = self.parse_factor(tokens);
-                if let Ok(right_factor) = right_factor {
-
+                let next_token_precedence = Self::precedence(&next_token) + 1;
+                let right_factor = self.parse_expression(tokens, next_token_precedence);
+                if let Ok(right) = right_factor {
                     let left_exp = Box::new(left);
-                    let right_exp = Box::new(AstExpression::Factor(right_factor));
+                    let right_exp = Box::new(right);
                     left = AstExpression::Binary {binop, left: left_exp , right: right_exp };
+                } else {
+                    return Err("Invalid expression".to_string());
                 }
+                next_token = Self::peek_token(tokens);
             }
             Ok(left)
         } else {
@@ -116,7 +124,7 @@ impl Parser {
 
         let _ = tokens.remove(0);
 
-        let result = self.parse_expression(tokens);
+        let result = self.parse_expression(tokens, 0);
         if let Ok(expression) = result {
             if tokens.len() == 0 || tokens[0] != ";" {
                 return Err("Invalid expression".to_string());
@@ -197,13 +205,38 @@ impl Parser {
         self.regex.is_match(&token)
     }
 
-    fn parse_binop(&self, tokens: &mut Vec<String>) -> String {
-       tokens.remove(0)
+    fn parse_binop(&self, tokens: &mut Vec<String>) -> BinaryOp {
+        let token =        tokens.remove(0);
+        match token.as_str() {
+            "+" => BinaryOp::Add,
+            "-" => BinaryOp::Sub,
+            "*" => BinaryOp::Mul,
+            "/" => BinaryOp::Div,
+            "%" => BinaryOp::Modulo,
+            _ => panic!("Invalid binary operator ! {}", token.as_str())
+        }
+    }
+
+    fn is_binary_op(token: &String) -> bool {
+        token == "+" || token == "-" || token == "*" || token == "/" || token == "%"
+    }
+
+    fn precedence(token: &String) -> i32 {
+        match token.as_str() {
+            "*" | "/" | "%" => 50,
+            "+" | "-" => 45,
+            _ => panic!("Unknown precedence ! ({})", token)
+        }
+    }
+
+    fn peek_token(tokens: &Vec<String>) -> String {
+        if tokens.len() > 0 { tokens[0].clone()} else { "".to_string() }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::ast_model::expression::BinaryOp;
     use super::*;
 
     #[test]
@@ -327,7 +360,7 @@ mod tests {
     fn test_expression_parser_error() {
         let parser = Parser::new();
         let mut tokens = vec!["return".to_string()];
-        let expression = parser.parse_expression(&mut tokens);
+        let expression = parser.parse_expression(&mut tokens, 0);
         assert_eq!(expression.is_err(), true);
     }
 
@@ -348,6 +381,16 @@ mod tests {
             }
             _ => panic!("Invalid expression"),
         }
+    }
+
+
+    #[test]
+    fn test_return_wrong_order_parser_error() {
+        // based on writing-a-c-compiler-tests/tests/chapter_2/invalid_parse/wrong_order.c
+        let parser = Parser::new();
+        let mut tokens = vec!["return", "4", "-", ";"].iter().map(|s| s.to_string()).collect();
+        let result = parser.parse_return(&mut tokens);
+        assert_eq!(result.is_ok(), false);
     }
 
     #[test]
@@ -454,7 +497,7 @@ mod tests {
     fn test_parse_exp_binary_operator() {
         let parser = Parser::new();
         let mut tokens = vec!["1", "+", "2"].iter().map(|s| s.to_string()).collect();
-        let result= parser.parse_expression(&mut tokens);
+        let result= parser.parse_expression(&mut tokens, 0);
         assert_eq!(result.is_ok(), true);
         if let AstExpression::Binary {binop, left, right} = result.unwrap()
         && let AstExpression::Factor(right_factor) = right.as_ref()
@@ -493,7 +536,7 @@ mod tests {
     fn test_parse_exp_binary_operator_nested_expression() {
         let parser = Parser::new();
         let mut tokens = vec!["1", "+", "(", "2", "-", "3", ")"].iter().map(|s| s.to_string()).collect();
-        let result= parser.parse_expression(&mut tokens);
+        let result= parser.parse_expression(&mut tokens, 0);
         assert_eq!(result.is_ok(), true);
         if let AstExpression::Binary {binop: binop1, left, right} = result.unwrap()
             && let AstExpression::Factor(left_factor) = left.as_ref()
@@ -509,10 +552,44 @@ mod tests {
             assert_eq!(left_cst.value, 1);
             assert_eq!(left_nested_cst.value, 2);
             assert_eq!(right_nested_cst.value, 3);
-            assert_eq!(binop1, "+".to_string());
-            assert_eq!(binop2, "-");
+            assert_eq!(binop1.clone(), BinaryOp::Add);
+            assert_eq!(binop2.clone(), BinaryOp::Sub);
         } else {
             panic!("Something failed !")
         }
+    }
+
+    #[test]
+    fn test_parse_exp_binary_operator_precedence() {
+        let parser = Parser::new();
+        let mut tokens = vec!["1", "*", "2", "+", "3"].iter().map(|s| s.to_string()).collect();
+        let result= parser.parse_expression(&mut tokens, 0);
+        assert_eq!(result.is_ok(), true);
+        let result_expression = result.unwrap();
+        if let AstExpression::Binary {binop: binop1, left: left1, right: right1} = result_expression
+            && let AstExpression::Binary{binop: binop2, left: left2, right: right2} = left1.as_ref()
+            && let AstExpression::Factor(factor1) = right1.as_ref()
+            && let AstExpression::Factor(factor2) = right2.as_ref()
+            && let AstExpression::Factor(factor3) = left2.as_ref()
+            && let AstFactor::Constant{constant: cst1} = factor1
+            && let AstFactor::Constant{constant: cst2} = factor2
+            && let AstFactor::Constant{constant: cst3} = factor3
+        {
+            assert_eq!(binop1.clone(), BinaryOp::Add);
+            assert_eq!(binop2.clone(), BinaryOp::Mul);
+            assert_eq!(cst1.value, 3);
+            assert_eq!(cst2.value, 2);
+            assert_eq!(cst3.value, 1);
+        } else {
+            panic!("Something failed !")
+        }
+    }
+
+    #[test]
+    fn test_parse_exp_binary_operator_error() {
+        let parser = Parser::new();
+        let mut tokens = vec!["4", "-"].iter().map(|s| s.to_string()).collect();
+        let result= parser.parse_expression(&mut tokens, 0);
+        assert_eq!(result.is_ok(), false);
     }
 }

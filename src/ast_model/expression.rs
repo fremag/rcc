@@ -18,7 +18,10 @@ pub enum AstExpression {
     Factor(AstFactor),
     Binary {
         left: Box<AstExpression>,
-        binop: String,
+        binop: BinaryOp,
         right: Box<AstExpression>,
     },
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BinaryOp {Add, Sub, Mul, Div, Modulo}
