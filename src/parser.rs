@@ -281,11 +281,11 @@ mod tests {
         let factor = parser.parse_factor(&mut tokens);
         assert_eq!(factor.is_ok(), true);
         if let AstFactor::Unary {
-            unary_op: op,
-            factor: factor,
+            unary_op,
+            factor,
         } = factor.unwrap()
         {
-            assert_eq!(op, AstUnaryOp::BitwiseComplement);
+            assert_eq!(unary_op, AstUnaryOp::BitwiseComplement);
             match factor.as_ref() {
                 AstFactor::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
@@ -307,11 +307,11 @@ mod tests {
         let factor = parser.parse_factor(&mut tokens);
         assert_eq!(factor.is_ok(), true);
         if  let AstFactor::Unary {
-            unary_op: op,
-            factor: factor,
+            unary_op,
+            factor,
         } = factor.unwrap()
         {
-            assert_eq!(op, AstUnaryOp::Negate);
+            assert_eq!(unary_op, AstUnaryOp::Negate);
             match factor.as_ref() {
                 AstFactor::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
@@ -505,6 +505,7 @@ mod tests {
             && let AstFactor::Constant{constant: right_cst} = right_factor
             && let AstFactor::Constant{constant: left_cst} = left_factor
         {
+            assert_eq!(binop, BinaryOp::Add);
             assert_eq!(left_cst.value, 1);
             assert_eq!(right_cst.value, 2);
         } else {
@@ -525,6 +526,7 @@ mod tests {
             && let AstFactor::Constant{constant: right_cst} = right_factor
             && let AstFactor::Constant{constant: left_cst} = left_factor
         {
+            assert_eq!(*binop, BinaryOp::Add);
             assert_eq!(left_cst.value, 1);
             assert_eq!(right_cst.value, 2);
         } else {
