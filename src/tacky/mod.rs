@@ -16,6 +16,12 @@ pub enum TackyInstruction {
         TackyVal, /* src */
         TackyVal, /* dst */
     ),
+    Binary(
+        TackyBinaryOp,
+        TackyVal, /* src 1 */
+        TackyVal, /* src 2 */
+        TackyVal, /* dst */
+    )
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -28,4 +34,13 @@ pub enum TackyVal {
 pub enum TackyUnaryOp {
     Complement,
     Negate,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TackyBinaryOp {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulo,
 }

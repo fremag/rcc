@@ -212,7 +212,7 @@ impl Parser {
             "-" => BinaryOp::Sub,
             "*" => BinaryOp::Mul,
             "/" => BinaryOp::Div,
-            "%" => BinaryOp::Modulo,
+            "%" => BinaryOp::Mod,
             _ => panic!("Invalid binary operator ! {}", token.as_str())
         }
     }

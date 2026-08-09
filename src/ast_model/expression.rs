@@ -24,4 +24,4 @@ pub enum AstExpression {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum BinaryOp {Add, Sub, Mul, Div, Modulo}
+pub enum BinaryOp {Add, Sub, Mul, Div, Mod }

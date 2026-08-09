@@ -3,12 +3,12 @@ use crate::asm_constructs::instruction::{Instruction, StackFrame, UnaryOperator}
 use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::program::AsmProgram;
 use crate::ast_model::ast_return::AstReturn;
-use crate::ast_model::expression::{AstExpression, AstFactor};
+use crate::ast_model::expression::{AstExpression, AstFactor, BinaryOp};
 use crate::ast_model::function::AstFunction;
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::unary::AstUnaryOp;
 use crate::tacky::TackyVal::Constant;
-use crate::tacky::{TackyFunction, TackyInstruction, TackyProgram, TackyUnaryOp, TackyVal};
+use crate::tacky::{TackyBinaryOp, TackyFunction, TackyInstruction, TackyProgram, TackyUnaryOp, TackyVal};
 
 pub struct TackyEmit {
     tmp_var_count: i32,
@@ -48,7 +48,16 @@ impl TackyEmit {
                 self.emit_factor(factor, instructions)
             }
             AstExpression::Binary { binop, left, right } => {
-                TackyVal::Constant(0)
+                let left_exp = left.as_ref().clone();
+                let right_exp = right.as_ref().clone();
+                let v1 = self.emit_expression(&left_exp, instructions);
+                let v2 = self.emit_expression(&right_exp, instructions);
+                let dst_name = self.make_temporary();
+                let dst = TackyVal::Var(dst_name);
+                let tacky_op = TackyEmit::convert_binop(binop);
+                let tacky_inst = TackyInstruction::Binary(tacky_op, v1, v2, dst.clone());
+                instructions.push(tacky_inst);
+                dst
             }
         }
     }
@@ -57,6 +66,16 @@ impl TackyEmit {
         match ast_unary_op {
             AstUnaryOp::Negate => TackyUnaryOp::Negate,
             AstUnaryOp::BitwiseComplement => TackyUnaryOp::Complement,
+        }
+    }
+
+    fn convert_binop(ast_bin_op: &BinaryOp) -> TackyBinaryOp {
+        match ast_bin_op {
+            BinaryOp::Add => TackyBinaryOp::Add,
+            BinaryOp::Sub =>  TackyBinaryOp::Subtract,
+            BinaryOp::Mul =>  TackyBinaryOp::Multiply,
+            BinaryOp::Div =>  TackyBinaryOp::Divide,
+            BinaryOp::Mod =>  TackyBinaryOp::Modulo,
         }
     }
 
@@ -195,6 +214,7 @@ fn replace_pseudo_registers(instructions: &Vec<Instruction>) -> (Vec<Instruction
 mod tests {
     use super::*;
     use crate::ast_model::constant::AstConstant;
+    use crate::ast_model::expression::BinaryOp::Add;
     use crate::ast_model::statement::AstStatement;
     use crate::ast_model::unary::AstUnaryOp::{BitwiseComplement, Negate};
 
@@ -366,6 +386,31 @@ mod tests {
             assert_eq!(val, &Constant(3));
         } else {
             panic!();
+        }
+    }
+
+    #[test]
+    pub fn test_bin_op() {
+        let mut emit = TackyEmit::new();
+        let left= Box::new(AstExpression::Factor(AstFactor::Constant {constant: AstConstant { value: 1 }}));
+        let right= Box::new(AstExpression::Factor(AstFactor::Constant {constant: AstConstant { value: 2 }}));
+        let exp = AstExpression::Binary {left, binop: Add, right };
+        let mut instructions: Vec<TackyInstruction> = Vec::new();
+        let result = emit.emit_expression(&exp, &mut instructions);
+        if let TackyVal::Var(val) = result {
+            assert_eq!(val, "tmp.0");
+            assert_eq!(instructions.len(), 1);
+            let instruction = instructions.get(0).unwrap();
+            if let TackyInstruction::Binary(binop, val1, val2, dst) = instruction
+                && let TackyVal::Constant(cst1) = val1
+                && let TackyVal::Constant(cst2) = val2
+                && let TackyVal::Var(var) = dst
+            {
+                assert_eq!(var, "tmp.0");
+                assert_eq!(*cst1, 1);
+                assert_eq!(*cst2, 2);
+                assert_eq!(*binop, TackyBinaryOp::Add);
+            }
         }
     }
 }
