@@ -3,7 +3,7 @@ use crate::asm_constructs::instruction::{Instruction, StackFrame, UnaryOperator}
 use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::program::AsmProgram;
 use crate::ast_model::ast_return::AstReturn;
-use crate::ast_model::expression::AstExpression;
+use crate::ast_model::expression::{AstExpression, AstFactor};
 use crate::ast_model::function::AstFunction;
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::unary::AstUnaryOp;
@@ -19,30 +19,38 @@ impl TackyEmit {
         Self { tmp_var_count: 0 }
     }
 
+    pub fn emit_factor(&mut self, factor: &AstFactor, instructions: &mut Vec<TackyInstruction>) -> TackyVal{
+        match factor {
+            AstFactor::Constant { constant } => Constant(constant.value),
+            AstFactor::Unary { unary_op, factor } => {
+                let inner_factor = factor.as_ref().clone();
+                let src = self.emit_factor(&inner_factor, instructions);
+                let dst_name = self.make_temporary();
+                let dst = TackyVal::Var(dst_name);
+                let tacky_op = TackyEmit::convert_unop(unary_op);
+                let tacky_inst = TackyInstruction::Unary(tacky_op, src, dst.clone());
+                instructions.push(tacky_inst);
+                dst
+            }
+            AstFactor::Nested(exp) => {
+                self.emit_expression(exp, instructions)
+            }
+        }
+    }
+
     pub fn emit_expression(
         &mut self,
         expression: &AstExpression,
         instructions: &mut Vec<TackyInstruction>,
     ) -> TackyVal {
-/*
         match expression {
-             AstExpression::Constant { constant: cst } => Constant(cst.value),
-            AstExpression::Unary {
-                unary_op: op,
-                expression: inner,
-            } => {
-                let exp = inner.as_ref().clone();
-                let src = self.emit_expression(&exp, instructions);
-                let dst_name = self.make_temporary();
-                let dst = TackyVal::Var(dst_name);
-                let tacky_op = TackyEmit::convert_unop(op);
-                let tacky_inst = TackyInstruction::Unary(tacky_op, src, dst.clone());
-                instructions.push(tacky_inst);
-                dst
+            AstExpression::Factor(factor) => {
+                self.emit_factor(factor, instructions)
             }
-        }        
- */
-        TackyVal::Constant(0)
+            AstExpression::Binary { binop, left, right } => {
+                TackyVal::Constant(0)
+            }
+        }
     }
 
     fn convert_unop(ast_unary_op: &AstUnaryOp) -> TackyUnaryOp {
@@ -182,7 +190,7 @@ fn replace_pseudo_registers(instructions: &Vec<Instruction>) -> (Vec<Instruction
 
     (new_instructions, stack_frame)
 }
-/*
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -193,9 +201,9 @@ mod tests {
     #[test]
     pub fn test_emit_expression_constant() {
         let mut emit = TackyEmit::new();
-        let ast_exp = AstExpression::Constant {
+        let ast_exp = AstExpression::Factor(AstFactor::Constant {
             constant: AstConstant { value: 3 },
-        };
+        });
         let mut instructions: Vec<TackyInstruction> = Vec::new();
         let result = emit.emit_expression(&ast_exp, &mut instructions);
 
@@ -207,12 +215,12 @@ mod tests {
     pub fn test_emit_expression_unary() {
         let mut emit = TackyEmit::new();
 
-        let ast_exp = AstExpression::Unary {
+        let ast_exp = AstExpression::Factor(AstFactor::Unary {
             unary_op: Negate,
-            expression: Box::new(AstExpression::Constant {
+            factor: Box::new(AstFactor::Constant {
                 constant: AstConstant { value: 3 },
             }),
-        };
+        });
         let mut instructions: Vec<TackyInstruction> = Vec::new();
         let result = emit.emit_expression(&ast_exp, &mut instructions);
 
@@ -233,9 +241,9 @@ mod tests {
         let mut emit = TackyEmit::new();
 
         let ast_return = AstReturn {
-            expression: AstExpression::Constant {
-                constant: AstConstant { value: 3 },
-            },
+            expression: AstExpression::Factor(AstFactor::Constant {
+                constant: AstConstant { value: 3 }
+            })
         };
         let mut instructions: Vec<TackyInstruction> = Vec::new();
         emit.emit_return(&ast_return, &mut instructions);
@@ -253,15 +261,15 @@ mod tests {
         let mut emit = TackyEmit::new();
 
         let ast_return = AstReturn {
-            expression: AstExpression::Unary {
+            expression: AstExpression::Factor(AstFactor::Unary {
                 unary_op: Negate,
-                expression: Box::new(AstExpression::Unary {
+                factor: Box::new(AstFactor::Unary {
                     unary_op: BitwiseComplement,
-                    expression: Box::new(AstExpression::Constant {
+                    factor: Box::new(AstFactor::Constant {
                         constant: AstConstant { value: 3 },
                     }),
                 }),
-            },
+            }),
         };
         let mut instructions: Vec<TackyInstruction> = Vec::new();
         emit.emit_return(&ast_return, &mut instructions);
@@ -315,9 +323,9 @@ mod tests {
             identifier: "main".to_string(),
             body: AstStatement {
                 return_exp: AstReturn {
-                    expression: AstExpression::Constant {
+                    expression: AstExpression::Factor(AstFactor::Constant {
                         constant: AstConstant { value: 3 },
-                    },
+                    }),
                 },
             },
         };
@@ -341,9 +349,9 @@ mod tests {
                 identifier: "main".to_string(),
                 body: AstStatement {
                     return_exp: AstReturn {
-                        expression: AstExpression::Constant {
+                        expression: AstExpression::Factor(AstFactor::Constant {
                             constant: AstConstant { value: 3 },
-                        },
+                        }),
                     },
                 },
             },
@@ -361,4 +369,3 @@ mod tests {
         }
     }
 }
-*/
