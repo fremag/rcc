@@ -1,6 +1,7 @@
 use crate::asm_constructs::function::FunctionDefinition;
-use crate::asm_constructs::instruction::{Instruction, StackFrame, UnaryOperator};
+use crate::asm_constructs::instruction::{BinaryOperator, Instruction, StackFrame, UnaryOperator};
 use crate::asm_constructs::operand::{Operand, Reg};
+use crate::asm_constructs::operand::Operand::Register;
 use crate::asm_constructs::program::AsmProgram;
 use crate::ast_model::ast_return::AstReturn;
 use crate::ast_model::expression::{AstExpression, AstFactor, BinaryOp};
@@ -86,6 +87,15 @@ impl TackyEmit {
         }
     }
 
+    fn convert_asm_binop(ast_binary_op: &TackyBinaryOp) -> BinaryOperator {
+        match ast_binary_op {
+            TackyBinaryOp::Add => BinaryOperator::Add,
+            TackyBinaryOp::Subtract =>  BinaryOperator::Sub,
+            TackyBinaryOp::Multiply =>  BinaryOperator::Mul,
+            _ => panic!("invalid binary operator"),
+        }
+    }
+
     fn make_temporary(&mut self) -> String {
         let tmp = String::from("tmp.") + &self.tmp_var_count.to_string();
         self.tmp_var_count += 1;
@@ -146,7 +156,42 @@ impl TackyEmit {
                     operand: dest2,
                 };
                 instructions.push(unary);
-            } else {
+            } else if let TackyInstruction::Binary(op, src1, src2, dst) = tacky_instruction {
+                let src1 = self.value_to_asm(&src1);
+                let src2 = self.value_to_asm(&src2);
+                let dest = self.value_to_asm(&dst);
+
+                match op {
+                    TackyBinaryOp::Add | TackyBinaryOp::Subtract | TackyBinaryOp::Multiply => {
+                        let mov = Instruction::Mov { src: src1, dest: dest.clone() };
+                        let binop = Self::convert_asm_binop(op);
+                        let bin = Instruction::Binary {binary_operator: binop, left: src2, right: dest };
+                        instructions.push(mov);
+                        instructions.push(bin);
+                    }
+                    TackyBinaryOp::Divide => {
+                        let mov1 = Instruction::Mov { src: src1, dest: Register { reg: Reg::AX } };
+                        let cdq = Instruction::Cdq;
+                        let idiv = Instruction::Idiv { src: src2 };
+                        let mov2 = Instruction::Mov { src: Register { reg: Reg::AX }, dest };
+                        instructions.push(mov1);
+                        instructions.push(cdq);
+                        instructions.push(idiv);
+                        instructions.push(mov2);
+                    }
+                    TackyBinaryOp::Modulo => {
+                        let mov1 = Instruction::Mov { src: src1, dest: Register { reg: Reg::AX } };
+                        let cdq = Instruction::Cdq;
+                        let idiv = Instruction::Idiv { src: src2 };
+                        let mov2 = Instruction::Mov { src: Register { reg: Reg::DX }, dest };
+                        instructions.push(mov1);
+                        instructions.push(cdq);
+                        instructions.push(idiv);
+                        instructions.push(mov2);
+                    }
+                }
+            }
+            else {
                 unreachable!()
             };
         }

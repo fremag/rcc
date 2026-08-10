@@ -12,7 +12,9 @@ pub enum Operand {
 #[derive(Debug, Clone)]
 pub enum Reg {
     AX,
+    DX,
     R10,
+    R11,
 }
 
 impl Operand {
@@ -22,7 +24,9 @@ impl Operand {
             Operand::Pseudo { identifier } => String::from(identifier.clone()),
             Operand::Register { reg } => match reg {
                 Reg::AX => String::from("%eax"),
+                Reg::DX => String::from("%edx"),
                 Reg::R10 => String::from("%r10d"),
+                Reg::R11 => String::from("%r11d"),
             },
             Operand::Stack { offset } => format!("-{}(%rbp)", offset),
         }

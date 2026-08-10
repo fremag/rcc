@@ -1,13 +1,20 @@
 use crate::asm_constructs::operand::{Operand, Reg};
 use std::collections::HashMap;
 use Operand::Register;
-use crate::asm_constructs::instruction::Instruction::Mov;
+use crate::asm_constructs::instruction::Instruction::{Binary, Idiv, Mov};
 use crate::asm_constructs::operand::Operand::Stack;
 
 #[derive(Debug, Clone)]
 pub enum UnaryOperator {
     Neg,
     Not,
+}
+
+#[derive(Debug, Clone)]
+pub enum BinaryOperator {
+    Add,
+    Sub,
+    Mul,
 }
 
 #[derive(Debug, Clone)]
@@ -24,13 +31,22 @@ pub enum Instruction {
         operand: Operand,
     },
     Ret,
+    Binary {
+        binary_operator : BinaryOperator,
+        left: Operand,
+        right: Operand
+    },
+    Idiv {
+        src: Operand,
+    },
+    Cdq
 }
 
 impl Instruction {
     pub fn to_code(&self) -> String {
         match self {
             Instruction::AllocateStack { size } => format!("subq ${}, %rsp", size),
-            Instruction::Mov { src, dest } => {
+            Mov { src, dest } => {
                 format!("movl {}, {}", src.to_code(), dest.to_code())
             }
             Instruction::Unary {
@@ -44,6 +60,17 @@ impl Instruction {
                 format!("{} {}", unary, operand.to_code())
             }
             Instruction::Ret => String::from("movq %rbp, %rsp\n\tpopq %rbp\n\tret"),
+            Binary {binary_operator, left, right} => {
+                let binary = match binary_operator {
+                    BinaryOperator::Add => "addl",
+                    BinaryOperator::Sub => "subl",
+                    BinaryOperator::Mul => "mull",
+                };
+                format!("{} {}, {}, ", binary, left.to_code(), right.to_code())
+            }
+
+            Idiv { src } => {format!("idivl {}", src.to_code())}
+            Instruction::Cdq => {String::from("cdq")}
         }
     }
 
@@ -70,6 +97,16 @@ impl Instruction {
             },
             Instruction::AllocateStack { size } => Instruction::AllocateStack { size: *size },
             Instruction::Ret => Instruction::Ret,
+            Instruction::Binary { binary_operator, left, right } => {
+                let new_left = left.fix_pseudo_registers(pseudo_registers);
+                let new_right = right.fix_pseudo_registers(pseudo_registers);
+                Instruction::Binary { binary_operator: binary_operator.clone(), right: new_right, left: new_left}
+            }
+            Instruction::Idiv { src } => {
+                let new_src = src.fix_pseudo_registers(pseudo_registers);
+                Instruction::Idiv { src: new_src } 
+            }
+            Instruction::Cdq => Instruction::Cdq
         }
     }
 
@@ -85,7 +122,56 @@ impl Instruction {
                     }
                     (_, _) => None
                 }
+            },
+            Idiv { src } => {
+                match src {
+                    Operand::Imm {value} => {
+                        Some(vec![ 
+                            Mov { src: Operand::Imm{ value: *value }, dest: Register {reg: Reg::R10} },
+                            Idiv {src: Register {reg: Reg::R10}},
+                        ])
+                    },
+                    _ => None
 
+                }
+            },
+            Binary {binary_operator, left, right} => {
+                match binary_operator {
+                    BinaryOperator::Add => {
+                        match (left, right) {
+                            (Stack { offset: offset_src }, Stack { offset: offset_dest }) => {
+                                Some(vec![
+                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::R10 } },
+                                    Binary {binary_operator: BinaryOperator::Add, left: Register { reg: Reg::R10 }, right: Stack { offset: *offset_dest } },
+                                ])
+                            },
+                            (_, _) => None
+                        }
+                    },
+                    BinaryOperator::Sub => {
+                        match (left, right) {
+                            (Stack { offset: offset_src }, Stack { offset: offset_dest }) => {
+                                Some(vec![
+                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::R10 } },
+                                    Binary {binary_operator: BinaryOperator::Sub, left: Register { reg: Reg::R10 }, right: Stack { offset: *offset_dest } },
+                                ])
+                            },
+                            (_, _) => None
+                        }
+                    },
+                    BinaryOperator::Mul => {
+                        match (left, right) {
+                            (operand, Stack { offset: offset_dest }) => {
+                                Some(vec![
+                                    Mov { src: Stack {offset: *offset_dest}, dest: Register { reg: Reg::R11 } },
+                                    Binary {binary_operator: BinaryOperator::Mul, left: operand.clone(), right: Register { reg: Reg::R11 }},
+                                    Mov { src: Register { reg: Reg::R11 }, dest: Stack {offset: *offset_dest}},
+                                ])
+                            },
+                            (_, _) => None
+                        }
+                    },
+                }
             },
             _ => None
         }
