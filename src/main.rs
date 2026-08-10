@@ -120,11 +120,11 @@ fn main() -> Result<(), std::io::Error> {
 
     let asm_file = change_extension(input_file, "s");
     let bak_file = change_extension(input_file, "b");
-    fs::write(asm_file, &asm_code).expect("Should have been able to write the file");
-    fs::write(bak_file, &asm_code).expect("Should have been able to write the file");
+    fs::write(&asm_file, &asm_code).expect("Should have been able to write the file");
+    fs::write(&bak_file, &asm_code).expect("Should have been able to write the file");
     let exe_file = change_extension(input_file, "");
     let command =
-        run_codegen("/usr/bin/gcc", input_file, &exe_file).expect("failed to execute process");
+        run_codegen("/usr/bin/gcc", asm_file.to_str().unwrap(), &exe_file).expect("failed to execute process");
     let output = String::from_utf8_lossy(&command.stdout);
     println!("{output}");
 
