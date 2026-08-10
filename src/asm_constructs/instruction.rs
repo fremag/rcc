@@ -64,9 +64,11 @@ impl Instruction {
                 let binary = match binary_operator {
                     BinaryOperator::Add => "addl",
                     BinaryOperator::Sub => "subl",
-                    BinaryOperator::Mul => "mull",
+                    BinaryOperator::Mul => "imull",
                 };
-                format!("{} {}, {}, ", binary, left.to_code(), right.to_code())
+                let left_asm = left.to_code();
+                let right_asm = right.to_code();
+                format!("{} {}, {} ", binary, left_asm, right_asm)
             }
 
             Idiv { src } => {format!("idivl {}", src.to_code())}
