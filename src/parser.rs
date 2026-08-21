@@ -46,7 +46,9 @@ impl Parser {
         if let Ok(constant) = self.parse_constant(tokens) {
             let f = AstFactor::Constant { constant };
             Ok(f)
-        } else if Self::check_token(tokens, "~") || Self::check_token(tokens, "-") {
+        } else if Self::check_token(tokens, "~") 
+            || Self::check_token(tokens, "-") 
+            || Self::check_token(tokens, "!") {
             if let Ok(op) = self.parse_unop(tokens) {
                 if let Ok(inner_exp) = self.parse_factor(tokens) {
                     Ok(AstFactor::Unary {
@@ -108,6 +110,7 @@ impl Parser {
         match token.as_str() {
             "~" => Ok(AstUnaryOp::BitwiseComplement),
             "-" => Ok(AstUnaryOp::Negate),
+            "!" => Ok(AstUnaryOp::Not),
             _ => Err(format!("Invalid unary operator: {}", &token)),
         }
     }
@@ -212,18 +215,32 @@ impl Parser {
             "*" => AstBinaryOp::Mul,
             "/" => AstBinaryOp::Div,
             "%" => AstBinaryOp::Mod,
+            ">" => AstBinaryOp::GreaterThan,
+            ">=" => AstBinaryOp::GreaterThanEqual,
+            "<" => AstBinaryOp::LessThan,
+            "<=" => AstBinaryOp::LessThanEqual,
+            "==" => AstBinaryOp::Equal,
+            "!=" => AstBinaryOp::NotEqual,
+            "&&" => AstBinaryOp::And,
+            "||" => AstBinaryOp::Or,
             _ => panic!("Invalid binary operator ! {}", token.as_str())
         }
     }
 
     fn is_binary_op(token: &String) -> bool {
-        token == "+" || token == "-" || token == "*" || token == "/" || token == "%"
+        token == "+" || token == "-" || token == "*" || token == "/" || token == "%" || 
+        token == "<" || token == "<=" || token == ">" || token == ">=" ||
+        token == "==" || token == "!=" || token == "&&" || token == "||" 
     }
 
     fn precedence(token: &String) -> i32 {
         match token.as_str() {
             "*" | "/" | "%" => 50,
             "+" | "-" => 45,
+            "<" | "<=" | ">" | ">=" => 35,
+            "==" | "!=" => 30,
+            "&&" => 10,
+            "||" => 5,
             _ => panic!("Unknown precedence ! ({})", token)
         }
     }

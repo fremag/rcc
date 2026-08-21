@@ -67,6 +67,7 @@ impl TackyEmit {
         match ast_unary_op {
             AstUnaryOp::Negate => TackyUnaryOp::Negate,
             AstUnaryOp::BitwiseComplement => TackyUnaryOp::Complement,
+            AstUnaryOp::Not => todo!(),
         }
     }
 
@@ -77,6 +78,14 @@ impl TackyEmit {
             AstBinaryOp::Mul =>  TackyBinaryOp::Multiply,
             AstBinaryOp::Div =>  TackyBinaryOp::Divide,
             AstBinaryOp::Mod =>  TackyBinaryOp::Modulo,
+            AstBinaryOp::And => todo!(),
+            AstBinaryOp::Or => todo!(),
+            AstBinaryOp::Equal => todo!(),
+            AstBinaryOp::NotEqual => todo!(),
+            AstBinaryOp::LessThan => todo!(),
+            AstBinaryOp::LessThanEqual => todo!(),
+            AstBinaryOp::GreaterThan => todo!(),
+            AstBinaryOp::GreaterThanEqual => todo!(),
         }
     }
 
