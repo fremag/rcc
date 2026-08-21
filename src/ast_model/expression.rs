@@ -1,5 +1,4 @@
 use crate::ast_model::constant::AstConstant;
-use crate::ast_model::unary::AstUnaryOp;
 
 #[derive(Debug, Clone)]
 pub enum AstFactor {
@@ -18,10 +17,16 @@ pub enum AstExpression {
     Factor(AstFactor),
     Binary {
         left: Box<AstExpression>,
-        binop: BinaryOp,
+        binop: AstBinaryOp,
         right: Box<AstExpression>,
     },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum BinaryOp {Add, Sub, Mul, Div, Mod }
+pub enum AstBinaryOp {Add, Sub, Mul, Div, Mod }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum AstUnaryOp {
+    Negate,
+    BitwiseComplement,
+}

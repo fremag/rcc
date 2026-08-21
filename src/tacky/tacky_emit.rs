@@ -4,10 +4,10 @@ use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::operand::Operand::Register;
 use crate::asm_constructs::program::AsmProgram;
 use crate::ast_model::ast_return::AstReturn;
-use crate::ast_model::expression::{AstExpression, AstFactor, BinaryOp};
+use crate::ast_model::expression::{AstExpression, AstFactor, AstBinaryOp};
 use crate::ast_model::function::AstFunction;
 use crate::ast_model::program::AstProgram;
-use crate::ast_model::unary::AstUnaryOp;
+use crate::ast_model::expression::AstUnaryOp;
 use crate::tacky::TackyVal::Constant;
 use crate::tacky::{TackyBinaryOp, TackyFunction, TackyInstruction, TackyProgram, TackyUnaryOp, TackyVal};
 
@@ -70,13 +70,13 @@ impl TackyEmit {
         }
     }
 
-    fn convert_binop(ast_bin_op: &BinaryOp) -> TackyBinaryOp {
+    fn convert_binop(ast_bin_op: &AstBinaryOp) -> TackyBinaryOp {
         match ast_bin_op {
-            BinaryOp::Add => TackyBinaryOp::Add,
-            BinaryOp::Sub =>  TackyBinaryOp::Subtract,
-            BinaryOp::Mul =>  TackyBinaryOp::Multiply,
-            BinaryOp::Div =>  TackyBinaryOp::Divide,
-            BinaryOp::Mod =>  TackyBinaryOp::Modulo,
+            AstBinaryOp::Add => TackyBinaryOp::Add,
+            AstBinaryOp::Sub =>  TackyBinaryOp::Subtract,
+            AstBinaryOp::Mul =>  TackyBinaryOp::Multiply,
+            AstBinaryOp::Div =>  TackyBinaryOp::Divide,
+            AstBinaryOp::Mod =>  TackyBinaryOp::Modulo,
         }
     }
 
@@ -259,9 +259,9 @@ fn replace_pseudo_registers(instructions: &Vec<Instruction>) -> (Vec<Instruction
 mod tests {
     use super::*;
     use crate::ast_model::constant::AstConstant;
-    use crate::ast_model::expression::BinaryOp::Add;
+    use crate::ast_model::expression::AstBinaryOp::Add;
     use crate::ast_model::statement::AstStatement;
-    use crate::ast_model::unary::AstUnaryOp::{BitwiseComplement, Negate};
+    use crate::ast_model::expression::AstUnaryOp::{BitwiseComplement, Negate};
 
     #[test]
     pub fn test_emit_expression_constant() {

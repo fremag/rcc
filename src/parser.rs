@@ -1,10 +1,9 @@
 use crate::ast_model::ast_return::AstReturn;
 use crate::ast_model::constant::AstConstant;
-use crate::ast_model::expression::{AstExpression, AstFactor, BinaryOp};
+use crate::ast_model::expression::{AstExpression, AstFactor, AstBinaryOp, AstUnaryOp};
 use crate::ast_model::function::AstFunction;
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::statement::AstStatement;
-use crate::ast_model::unary::AstUnaryOp;
 use crate::lexer::Lexer;
 
 pub struct Parser {
@@ -205,14 +204,14 @@ impl Parser {
         self.regex.is_match(&token)
     }
 
-    fn parse_binop(&self, tokens: &mut Vec<String>) -> BinaryOp {
+    fn parse_binop(&self, tokens: &mut Vec<String>) -> AstBinaryOp {
         let token =        tokens.remove(0);
         match token.as_str() {
-            "+" => BinaryOp::Add,
-            "-" => BinaryOp::Sub,
-            "*" => BinaryOp::Mul,
-            "/" => BinaryOp::Div,
-            "%" => BinaryOp::Mod,
+            "+" => AstBinaryOp::Add,
+            "-" => AstBinaryOp::Sub,
+            "*" => AstBinaryOp::Mul,
+            "/" => AstBinaryOp::Div,
+            "%" => AstBinaryOp::Mod,
             _ => panic!("Invalid binary operator ! {}", token.as_str())
         }
     }
@@ -236,7 +235,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast_model::expression::BinaryOp;
+    use crate::ast_model::expression::AstBinaryOp;
     use super::*;
 
     #[test]
@@ -505,7 +504,7 @@ mod tests {
             && let AstFactor::Constant{constant: right_cst} = right_factor
             && let AstFactor::Constant{constant: left_cst} = left_factor
         {
-            assert_eq!(binop, BinaryOp::Add);
+            assert_eq!(binop, AstBinaryOp::Add);
             assert_eq!(left_cst.value, 1);
             assert_eq!(right_cst.value, 2);
         } else {
@@ -526,7 +525,7 @@ mod tests {
             && let AstFactor::Constant{constant: right_cst} = right_factor
             && let AstFactor::Constant{constant: left_cst} = left_factor
         {
-            assert_eq!(*binop, BinaryOp::Add);
+            assert_eq!(*binop, AstBinaryOp::Add);
             assert_eq!(left_cst.value, 1);
             assert_eq!(right_cst.value, 2);
         } else {
@@ -554,8 +553,8 @@ mod tests {
             assert_eq!(left_cst.value, 1);
             assert_eq!(left_nested_cst.value, 2);
             assert_eq!(right_nested_cst.value, 3);
-            assert_eq!(binop1.clone(), BinaryOp::Add);
-            assert_eq!(binop2.clone(), BinaryOp::Sub);
+            assert_eq!(binop1.clone(), AstBinaryOp::Add);
+            assert_eq!(binop2.clone(), AstBinaryOp::Sub);
         } else {
             panic!("Something failed !")
         }
@@ -577,8 +576,8 @@ mod tests {
             && let AstFactor::Constant{constant: cst2} = factor2
             && let AstFactor::Constant{constant: cst3} = factor3
         {
-            assert_eq!(binop1.clone(), BinaryOp::Add);
-            assert_eq!(binop2.clone(), BinaryOp::Mul);
+            assert_eq!(binop1.clone(), AstBinaryOp::Add);
+            assert_eq!(binop2.clone(), AstBinaryOp::Mul);
             assert_eq!(cst1.value, 3);
             assert_eq!(cst2.value, 2);
             assert_eq!(cst3.value, 1);
