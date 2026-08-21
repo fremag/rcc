@@ -3,7 +3,19 @@ Learning Rust and writing a small C compiler with the book:
 Build a Real Programming Language from Scratch
 by Nora Sandler](https://nostarch.com/writing-c-compiler)
 
+
+
 <details open>
+<summary>Chapter 4: Logical and relational operators</summary>
+```bash
+~/writing-a-c-compiler-tests$ ./test_compiler ../rcc/target/debug/rcc --chapter 4 --stage parse
+----------------------------------------------------------------------
+Ran 105 tests in 1.805s
+
+OK
+```
+</details> 
+<details>
 <summary>Chapter 3: binary operators</summary>
 
 ```c
