@@ -21,7 +21,12 @@ pub enum TackyInstruction {
         TackyVal, /* src 1 */
         TackyVal, /* src 2 */
         TackyVal, /* dst */
-    )
+    ),
+    Copy{src: TackyVal, dst: TackyVal},
+    Label{identifier: String},
+    Jump{target : String},
+    JumpIfZero{condition: TackyVal, target : String},
+    JumpIfNotZero{condition: TackyVal, target : String}
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,6 +39,7 @@ pub enum TackyVal {
 pub enum TackyUnaryOp {
     Complement,
     Negate,
+    Not
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -43,4 +49,5 @@ pub enum TackyBinaryOp {
     Multiply,
     Divide,
     Modulo,
+    Equal, NotEqual, LessThan, LessOrEqual, GreaterThan, GreaterOrEqual
 }

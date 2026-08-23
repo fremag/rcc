@@ -67,7 +67,7 @@ impl TackyEmit {
         match ast_unary_op {
             AstUnaryOp::Negate => TackyUnaryOp::Negate,
             AstUnaryOp::BitwiseComplement => TackyUnaryOp::Complement,
-            AstUnaryOp::Not => todo!(),
+            AstUnaryOp::Not => TackyUnaryOp::Not,
         }
     }
 
@@ -80,12 +80,12 @@ impl TackyEmit {
             AstBinaryOp::Mod =>  TackyBinaryOp::Modulo,
             AstBinaryOp::And => todo!(),
             AstBinaryOp::Or => todo!(),
-            AstBinaryOp::Equal => todo!(),
-            AstBinaryOp::NotEqual => todo!(),
-            AstBinaryOp::LessThan => todo!(),
-            AstBinaryOp::LessThanEqual => todo!(),
-            AstBinaryOp::GreaterThan => todo!(),
-            AstBinaryOp::GreaterThanEqual => todo!(),
+            AstBinaryOp::Equal => TackyBinaryOp::Equal,
+            AstBinaryOp::NotEqual => TackyBinaryOp::NotEqual,
+            AstBinaryOp::LessThan => TackyBinaryOp::LessThan,
+            AstBinaryOp::LessThanEqual => TackyBinaryOp::LessOrEqual,
+            AstBinaryOp::GreaterThan => TackyBinaryOp::GreaterThan,
+            AstBinaryOp::GreaterThanEqual => TackyBinaryOp::GreaterOrEqual,
         }
     }
 
@@ -93,6 +93,8 @@ impl TackyEmit {
         match ast_unary_op {
             TackyUnaryOp::Negate => UnaryOperator::Neg,
             TackyUnaryOp::Complement => UnaryOperator::Not,
+            TackyUnaryOp::Not => todo!(),
+            
         }
     }
 
@@ -101,6 +103,12 @@ impl TackyEmit {
             TackyBinaryOp::Add => BinaryOperator::Add,
             TackyBinaryOp::Subtract =>  BinaryOperator::Sub,
             TackyBinaryOp::Multiply =>  BinaryOperator::Mul,
+            TackyBinaryOp::NotEqual => todo!(),
+            TackyBinaryOp::Equal => todo!(),
+            TackyBinaryOp::LessThan  => todo!(),
+            TackyBinaryOp::LessOrEqual => todo!(),
+            TackyBinaryOp::GreaterThan  => todo!(),
+            TackyBinaryOp::GreaterOrEqual => todo!(),
             _ => panic!("invalid binary operator"),
         }
     }
@@ -171,7 +179,11 @@ impl TackyEmit {
                 let dest = self.value_to_asm(&dst);
 
                 match op {
-                    TackyBinaryOp::Add | TackyBinaryOp::Subtract | TackyBinaryOp::Multiply => {
+                    TackyBinaryOp::Add | TackyBinaryOp::Subtract | TackyBinaryOp::Multiply |
+                    TackyBinaryOp::Equal | TackyBinaryOp::NotEqual |
+                    TackyBinaryOp::GreaterThan | TackyBinaryOp::GreaterOrEqual | 
+                    TackyBinaryOp::LessThan | TackyBinaryOp::LessOrEqual 
+                    => {
                         let mov = Instruction::Mov { src: src1, dest: dest.clone() };
                         let binop = Self::convert_asm_binop(op);
                         let bin = Instruction::Binary {binary_operator: binop, left: src2, right: dest };
