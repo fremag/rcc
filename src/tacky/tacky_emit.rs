@@ -56,9 +56,9 @@ impl TackyEmit {
                 let right_exp = right.as_ref().clone();
                 let v1 = self.emit_expression(&left_exp, instructions);
                 let label_or = self.make_label_or();
-                let jump_if_zero_v1 = TackyInstruction::JumpIfZero {condition: v1, target: label_or.clone()};
+                let jump_if_not_zero_v1 = TackyInstruction::JumpIfNotZero {condition: v1, target: label_or.clone()};
                 let v2 = self.emit_expression(&right_exp, instructions);
-                let jump_if_zero_v2 = TackyInstruction::JumpIfZero {condition: v2, target: label_or.clone()};
+                let jump_if_not_zero_v2 = TackyInstruction::JumpIfNotZero {condition: v2, target: label_or.clone()};
 
                 let result = TackyVal::Var(self.make_temporary());
                 let copy_result1 = TackyInstruction::Copy {src: TackyVal::Constant(1), dst: result.clone()};
@@ -66,8 +66,8 @@ impl TackyEmit {
                 let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
                 let label_end = self.make_label_end();
 
-                instructions.push(jump_if_zero_v1);
-                instructions.push(jump_if_zero_v2);
+                instructions.push(jump_if_not_zero_v1);
+                instructions.push(jump_if_not_zero_v2);
                 instructions.push(copy_result1);
                 instructions.push(jump_end);
                 instructions.push(copy_result0);
@@ -80,9 +80,9 @@ impl TackyEmit {
                 let right_exp = right.as_ref().clone();
                 let v1 = self.emit_expression(&left_exp, instructions);
                 let label_and = self.make_label_and();
-                let jump_if_not_zero_v1 = TackyInstruction::JumpIfNotZero {condition: v1, target: label_and.clone()};
+                let jump_if_zero_v1 = TackyInstruction::JumpIfZero {condition: v1, target: label_and.clone()};
                 let v2 = self.emit_expression(&right_exp, instructions);
-                let jump_if_not_zero_v2 = TackyInstruction::JumpIfNotZero {condition: v2, target: label_and.clone()};
+                let jump_if_zero_v2 = TackyInstruction::JumpIfZero {condition: v2, target: label_and.clone()};
 
                 let result = TackyVal::Var(self.make_temporary());
                 let copy_result1 = TackyInstruction::Copy {src: TackyVal::Constant(1), dst: result.clone()};
@@ -90,8 +90,8 @@ impl TackyEmit {
                 let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
                 let label_end = self.make_label_end();
 
-                instructions.push(jump_if_not_zero_v1);
-                instructions.push(jump_if_not_zero_v2);
+                instructions.push(jump_if_zero_v1);
+                instructions.push(jump_if_zero_v2);
                 instructions.push(copy_result1);
                 instructions.push(jump_end);
                 instructions.push(copy_result0);
