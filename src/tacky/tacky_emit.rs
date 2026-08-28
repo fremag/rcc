@@ -13,11 +13,14 @@ use crate::tacky::{TackyBinaryOp, TackyFunction, TackyInstruction, TackyProgram,
 
 pub struct TackyEmit {
     tmp_var_count: i32,
+    tmp_label_and_count: i32,
+    tmp_label_or_count: i32,
+    tmp_label_end_count: i32,
 }
 
 impl TackyEmit {
     pub(crate) fn new() -> Self {
-        Self { tmp_var_count: 0 }
+        Self { tmp_var_count: 0, tmp_label_and_count: 0, tmp_label_or_count: 0, tmp_label_end_count: 0 }
     }
 
     pub fn emit_factor(&mut self, factor: &AstFactor, instructions: &mut Vec<TackyInstruction>) -> TackyVal{
@@ -47,12 +50,61 @@ impl TackyEmit {
         match expression {
             AstExpression::Factor(factor) => {
                 self.emit_factor(factor, instructions)
+            },
+            AstExpression::Binary { binop : AstBinaryOp::Or, left, right } => {
+                let left_exp = left.as_ref().clone();
+                let right_exp = right.as_ref().clone();
+                let v1 = self.emit_expression(&left_exp, instructions);
+                let label_or = self.make_label_or();
+                let jump_if_zero_v1 = TackyInstruction::JumpIfZero {condition: v1, target: label_or.clone()};
+                let v2 = self.emit_expression(&right_exp, instructions);
+                let jump_if_zero_v2 = TackyInstruction::JumpIfZero {condition: v2, target: label_or.clone()};
+
+                let result = TackyVal::Var(self.make_temporary());
+                let copy_result1 = TackyInstruction::Copy {src: TackyVal::Constant(1), dst: result.clone()};
+                let jump_end = TackyInstruction::Jump {target: label_or.clone()};
+                let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
+                let label_end = self.make_label_end();
+
+                instructions.push(jump_if_zero_v1);
+                instructions.push(jump_if_zero_v2);
+                instructions.push(copy_result1);
+                instructions.push(jump_end);
+                instructions.push(copy_result0);
+                instructions.push(TackyInstruction::Label { identifier: label_end.clone() });
+
+                result
+            }
+            AstExpression::Binary { binop : AstBinaryOp::And, left, right } => {
+                let left_exp = left.as_ref().clone();
+                let right_exp = right.as_ref().clone();
+                let v1 = self.emit_expression(&left_exp, instructions);
+                let label_and = self.make_label_and();
+                let jump_if_not_zero_v1 = TackyInstruction::JumpIfNotZero {condition: v1, target: label_and.clone()};
+                let v2 = self.emit_expression(&right_exp, instructions);
+                let jump_if_not_zero_v2 = TackyInstruction::JumpIfNotZero {condition: v2, target: label_and.clone()};
+
+                let result = TackyVal::Var(self.make_temporary());
+                let copy_result1 = TackyInstruction::Copy {src: TackyVal::Constant(1), dst: result.clone()};
+                let jump_end = TackyInstruction::Jump {target: label_and.clone()};
+                let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
+                let label_end = self.make_label_end();
+
+                instructions.push(jump_if_not_zero_v1);
+                instructions.push(jump_if_not_zero_v2);
+                instructions.push(copy_result1);
+                instructions.push(jump_end);
+                instructions.push(copy_result0);
+                instructions.push(TackyInstruction::Label { identifier: label_end.clone() });
+
+                result
             }
             AstExpression::Binary { binop, left, right } => {
                 let left_exp = left.as_ref().clone();
                 let right_exp = right.as_ref().clone();
                 let v1 = self.emit_expression(&left_exp, instructions);
                 let v2 = self.emit_expression(&right_exp, instructions);
+
                 let dst_name = self.make_temporary();
                 let dst = TackyVal::Var(dst_name);
                 let tacky_op = TackyEmit::convert_binop(binop);
@@ -78,8 +130,8 @@ impl TackyEmit {
             AstBinaryOp::Mul =>  TackyBinaryOp::Multiply,
             AstBinaryOp::Div =>  TackyBinaryOp::Divide,
             AstBinaryOp::Mod =>  TackyBinaryOp::Modulo,
-            AstBinaryOp::And => todo!(),
-            AstBinaryOp::Or => todo!(),
+            AstBinaryOp::And => panic!("Invalid binary operator"),
+            AstBinaryOp::Or => panic!("Invalid binary operator"),
             AstBinaryOp::Equal => TackyBinaryOp::Equal,
             AstBinaryOp::NotEqual => TackyBinaryOp::NotEqual,
             AstBinaryOp::LessThan => TackyBinaryOp::LessThan,
@@ -115,6 +167,24 @@ impl TackyEmit {
 
     fn make_temporary(&mut self) -> String {
         let tmp = String::from("tmp.") + &self.tmp_var_count.to_string();
+        self.tmp_var_count += 1;
+        tmp
+    }
+
+    fn make_label_and(&mut self) -> String {
+        let tmp = String::from("label_and_") + &self.tmp_label_and_count.to_string();
+        self.tmp_var_count += 1;
+        tmp
+    }
+
+    fn make_label_or(&mut self) -> String {
+        let tmp = String::from("label_or_") + &self.tmp_label_or_count.to_string();
+        self.tmp_var_count += 1;
+        tmp
+    }
+
+    fn make_label_end(&mut self) -> String {
+        let tmp = String::from("label_end_") + &self.tmp_label_end_count.to_string();
         self.tmp_var_count += 1;
         tmp
     }
