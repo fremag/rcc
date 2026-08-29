@@ -351,8 +351,8 @@ fn replace_pseudo_registers(instructions: &Vec<Instruction>) -> (Vec<Instruction
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
     use crate::ast_model::constant::AstConstant;
-    use crate::ast_model::expression::AstBinaryOp::Add;
     use crate::ast_model::statement::AstStatement;
     use crate::ast_model::expression::AstUnaryOp::{BitwiseComplement, Negate};
     use crate::lexer::Lexer;
@@ -529,34 +529,6 @@ mod tests {
         }
     }
 
-    #[test]
-    pub fn test_bin_op() {
-        let mut emit = TackyEmit::new();
-        let left= Box::new(AstExpression::Factor(AstFactor::Constant {constant: AstConstant { value: 1 }}));
-        let right= Box::new(AstExpression::Factor(AstFactor::Constant {constant: AstConstant { value: 2 }}));
-        let exp = AstExpression::Binary {left, binop: Add, right };
-        let mut instructions: Vec<TackyInstruction> = Vec::new();
-        let result = emit.emit_expression(&exp, &mut instructions);
-        if let TackyVal::Var(val) = result {
-            assert_eq!(val, "tmp.0");
-            assert_eq!(instructions.len(), 1);
-            let instruction = instructions.get(0).unwrap();
-            if let TackyInstruction::Binary(binop, val1, val2, dst) = instruction
-                && let TackyVal::Constant(cst1) = val1
-                && let TackyVal::Constant(cst2) = val2
-                && let TackyVal::Var(var) = dst
-            {
-                assert_eq!(var, "tmp.0");
-                assert_eq!(*cst1, 1);
-                assert_eq!(*cst2, 2);
-                assert_eq!(*binop, TackyBinaryOp::Add);
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
-    }
 
     #[test]
     pub fn test_bin_and() {
@@ -573,7 +545,6 @@ mod tests {
         assert_eq!(tacky[7], "Return(Var(\"tmp.1\"))");
     }
 
-
     #[test]
     pub fn test_bin_or() {
         let tacky = tacky("1 || 0".to_string());
@@ -587,6 +558,23 @@ mod tests {
         assert_eq!(tacky[5], "Copy { src: Constant(1), dst: Var(\"tmp.1\") }");
         assert_eq!(tacky[6], "Label { identifier: \"label_end_0\" }");
         assert_eq!(tacky[7], "Return(Var(\"tmp.1\"))");
+    }
+
+    #[test_case("1 + 0", "Binary(Add, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 - 0", "Binary(Subtract, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 / 0", "Binary(Divide, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 * 0", "Binary(Multiply, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 % 0", "Binary(Modulo, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 == 0", "Binary(Equal, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 != 0", "Binary(NotEqual, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 < 0", "Binary(LessThan, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 <= 0", "Binary(LessOrEqual, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 > 0", "Binary(GreaterThan, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 >= 0", "Binary(GreaterOrEqual, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    pub fn test_bin_op(code: &str, expected: &str) {
+        let tacky = tacky(code.to_string());
+        assert_eq!(tacky.len(), 2);
+        assert_eq!(tacky[0], expected);
     }
 
     pub fn tacky(code : String) -> Vec<String> {
