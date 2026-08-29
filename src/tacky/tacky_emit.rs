@@ -390,7 +390,7 @@ fn replace_pseudo_registers(instructions: &Vec<Instruction>) -> (Vec<Instruction
     let mut new_instructions = Vec::<Instruction>::new();
 
     instructions.into_iter().for_each(|instruction| {
-        let result = instruction.fix_pseudo_registers(&mut stack_frame);
+        let result = instruction.replace_pseudo_registers(&mut stack_frame);
         new_instructions.push(result);
     });
 

@@ -1,8 +1,8 @@
 use crate::asm_constructs::operand::{Operand, Reg};
 use std::collections::HashMap;
 use Operand::Register;
-use crate::asm_constructs::instruction::Instruction::{Binary, Idiv, Mov};
-use crate::asm_constructs::operand::Operand::Stack;
+use crate::asm_constructs::instruction::Instruction::{Binary, Cmp, Idiv, Mov};
+use crate::asm_constructs::operand::Operand::{Imm, Stack};
 
 #[derive(Debug, Clone)]
 pub enum UnaryOperator {
@@ -99,7 +99,7 @@ impl Instruction {
         }
     }
 
-    pub fn fix_pseudo_registers(&self, pseudo_registers: &mut StackFrame) -> Instruction {
+    pub fn replace_pseudo_registers(&self, pseudo_registers: &mut StackFrame) -> Instruction {
         match self {
             Instruction::Mov { src, dest } => {
                 let new_src = src.fix_pseudo_registers(pseudo_registers);
@@ -130,6 +130,15 @@ impl Instruction {
                 let new_src = src.fix_pseudo_registers(pseudo_registers);
                 Instruction::Idiv { src: new_src } 
             }
+            Instruction::Cmp { left, right } => {
+                let left = left.fix_pseudo_registers(pseudo_registers);
+                let right = right.fix_pseudo_registers(pseudo_registers);
+                Instruction::Cmp {left, right}
+            }
+            Instruction::SetCC { cond_code, operand } => {
+                let operand = operand.fix_pseudo_registers(pseudo_registers);
+                Instruction::SetCC {cond_code: cond_code.clone(), operand}
+            }
             instruction => instruction.clone()
         }
     }
@@ -146,6 +155,18 @@ impl Instruction {
                     }
                     (_, _) => None
                 }
+            },
+            Instruction::Cmp { left : Stack {offset: offset_left}, right : Stack{offset: offset_right}} => {
+                Some(vec![
+                    Mov {src: Stack {offset: *offset_left}, dest: Register {reg: Reg::R10}},
+                    Cmp {left: Register {reg: Reg::R10}, right: Stack {offset: *offset_right}},
+                ])
+            },
+            Instruction::Cmp { left, right : Imm{value}} => {
+                Some(vec![
+                    Mov {src: Imm {value: *value}, dest: Register {reg: Reg::R11}},
+                    Cmp {left: left.clone(), right: Register {reg: Reg::R11}},
+                ])
             },
             Idiv { src } => {
                 match src {
@@ -281,7 +302,7 @@ mod tests {
             src: Operand::Pseudo { identifier: "var1".to_string() },
             dest: Operand::Register { reg: Reg::AX },
         };
-        let fixed = instr.fix_pseudo_registers(&mut stack_frame);
+        let fixed = instr.replace_pseudo_registers(&mut stack_frame);
 
         match fixed {
             Instruction::Mov { src, dest } => {
