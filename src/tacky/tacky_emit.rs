@@ -1,5 +1,5 @@
 use crate::asm_constructs::function::FunctionDefinition;
-use crate::asm_constructs::instruction::{BinaryOperator, Instruction, StackFrame, UnaryOperator};
+use crate::asm_constructs::instruction::{BinaryOperator, CondCode, Instruction, StackFrame, UnaryOperator};
 use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::operand::Operand::Register;
 use crate::asm_constructs::program::AsmProgram;
@@ -232,6 +232,15 @@ impl TackyEmit {
                 let mov = Instruction::Mov { src, dest };
                 instructions.push(mov);
                 instructions.push(Instruction::Ret {});
+            } else if let TackyInstruction::Unary(TackyUnaryOp::Not , src, dst) = tacky_instruction {
+                let src = self.value_to_asm(&src);
+                let dest = self.value_to_asm(&dst);
+                let cmp = Instruction::Cmp {left: Operand::Imm {value: 0}, right: src };
+                let mov = Instruction::Mov { src: Operand::Imm {value: 0}, dest: dest.clone() };
+                let set_cc = Instruction::SetCC {cond_code: CondCode::E, operand: dest.clone()};
+                instructions.push(cmp);
+                instructions.push(mov);
+                instructions.push(set_cc);
             } else if let TackyInstruction::Unary(op, src, dst) = tacky_instruction {
                 let src = self.value_to_asm(&src);
                 let dest = self.value_to_asm(&dst);
@@ -251,11 +260,7 @@ impl TackyEmit {
                 let dest = self.value_to_asm(&dst);
 
                 match op {
-                    TackyBinaryOp::Add | TackyBinaryOp::Subtract | TackyBinaryOp::Multiply |
-                    TackyBinaryOp::Equal | TackyBinaryOp::NotEqual |
-                    TackyBinaryOp::GreaterThan | TackyBinaryOp::GreaterOrEqual | 
-                    TackyBinaryOp::LessThan | TackyBinaryOp::LessOrEqual 
-                    => {
+                    TackyBinaryOp::Add | TackyBinaryOp::Subtract | TackyBinaryOp::Multiply => {
                         let mov = Instruction::Mov { src: src1, dest: dest.clone() };
                         let binop = Self::convert_asm_binop(op);
                         let bin = Instruction::Binary {binary_operator: binop, left: src2, right: dest };
@@ -282,7 +287,42 @@ impl TackyEmit {
                         instructions.push(idiv);
                         instructions.push(mov2);
                     }
+                    TackyBinaryOp::Equal  => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::E); }
+                    TackyBinaryOp::NotEqual  => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::NE); }
+                    TackyBinaryOp::GreaterThan => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::G); }
+                    TackyBinaryOp::GreaterOrEqual  => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::GE); }
+                    TackyBinaryOp::LessThan   => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::L); }
+                    TackyBinaryOp::LessOrEqual => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::LE); }
                 }
+            }
+            else if let TackyInstruction::JumpIfZero {condition, target} = tacky_instruction {
+                let left = Operand::Imm {value: 0};
+                let right = self.value_to_asm(condition);
+                let cmp = Instruction::Cmp {left, right};
+                let jmp_cc = Instruction::JmpCC {cond_code: CondCode::E, identifier: target.clone()};
+
+                instructions.push(cmp);
+                instructions.push(jmp_cc);
+            }
+            else if let TackyInstruction::JumpIfNotZero {condition, target} = tacky_instruction {
+                let left = Operand::Imm {value: 0};
+                let right = self.value_to_asm(condition);
+                let cmp = Instruction::Cmp {left, right};
+                let jmp_cc = Instruction::JmpCC {cond_code: CondCode::NE, identifier: target.clone()};
+
+                instructions.push(cmp);
+                instructions.push(jmp_cc);
+            }
+            else if let TackyInstruction::Jump {target} = tacky_instruction {
+            instructions.push(Instruction::Jmp{identifier: target.clone() });
+            }
+            else if let TackyInstruction::Copy {src, dst} = tacky_instruction {
+                let srv_val = self.value_to_asm(src);
+                let dst_val = self.value_to_asm(dst);
+            instructions.push(Instruction::Mov {src: srv_val, dest: dst_val});
+            }
+            else if let TackyInstruction::Label {identifier} = tacky_instruction {
+            instructions.push(Instruction::Label { identifier: identifier.clone() });
             }
             else {
                 unreachable!()
@@ -316,6 +356,15 @@ impl TackyEmit {
             unreachable!();
         }
     }
+}
+
+fn add_relational_operator_instructions(instructions: &mut Vec<Instruction>, src1: Operand, src2: Operand, dest: Operand, cond_code : CondCode) {
+    let cmp = Instruction::Cmp {left: src2, right: src1 };
+    let mov = Instruction::Mov { src: Operand::Imm {value: 0}, dest: dest.clone() };
+    let set_cc = Instruction::SetCC {cond_code, operand: dest.clone()};
+    instructions.push(cmp);
+    instructions.push(mov);
+    instructions.push(set_cc);
 }
 
 fn fix_instructions(instructions: &Vec<Instruction>) -> Vec::<Instruction> {

@@ -18,10 +18,17 @@ pub enum BinaryOperator {
 }
 
 #[derive(Debug, Clone)]
+pub enum CondCode {
+    E,
+    NE,
+    G,
+    GE,
+    L,
+    LE
+}
+
+#[derive(Debug, Clone)]
 pub enum Instruction {
-    AllocateStack {
-        size: usize,
-    },
     Mov {
         src: Operand,
         dest: Operand,
@@ -30,16 +37,27 @@ pub enum Instruction {
         unary_operator: UnaryOperator,
         operand: Operand,
     },
-    Ret,
     Binary {
         binary_operator : BinaryOperator,
+        left: Operand,
+        right: Operand
+    },
+    Cmp {
         left: Operand,
         right: Operand
     },
     Idiv {
         src: Operand,
     },
-    Cdq
+    Cdq,
+    Jmp{ identifier : String},
+    JmpCC{cond_code : CondCode, identifier : String},
+    SetCC{cond_code : CondCode, operand: Operand},
+    Label{identifier : String},
+    AllocateStack {
+        size: usize,
+    },
+    Ret
 }
 
 impl Instruction {
@@ -73,6 +91,11 @@ impl Instruction {
 
             Idiv { src } => {format!("idivl {}", src.to_code())}
             Instruction::Cdq => {String::from("cdq")}
+            Instruction::Cmp { .. } => todo!(),
+            Instruction::Jmp { .. } => todo!(),
+            Instruction::JmpCC { .. } => todo!(),
+            Instruction::SetCC { .. } => todo!(),
+            Instruction::Label { .. } => todo!()
         }
     }
 
@@ -98,7 +121,6 @@ impl Instruction {
                 }
             },
             Instruction::AllocateStack { size } => Instruction::AllocateStack { size: *size },
-            Instruction::Ret => Instruction::Ret,
             Instruction::Binary { binary_operator, left, right } => {
                 let new_left = left.fix_pseudo_registers(pseudo_registers);
                 let new_right = right.fix_pseudo_registers(pseudo_registers);
@@ -108,7 +130,7 @@ impl Instruction {
                 let new_src = src.fix_pseudo_registers(pseudo_registers);
                 Instruction::Idiv { src: new_src } 
             }
-            Instruction::Cdq => Instruction::Cdq
+            instruction => instruction.clone()
         }
     }
 
