@@ -91,11 +91,15 @@ impl Instruction {
 
             Idiv { src } => {format!("idivl {}", src.to_code())}
             Instruction::Cdq => {String::from("cdq")}
-            Instruction::Cmp { .. } => todo!(),
-            Instruction::Jmp { .. } => todo!(),
-            Instruction::JmpCC { .. } => todo!(),
-            Instruction::SetCC { .. } => todo!(),
-            Instruction::Label { .. } => todo!()
+            Instruction::Cmp { left, right } => {
+                let left_asm = left.to_code();
+                let right_asm = right.to_code();
+                format!("cmpl {}, {} ", left_asm, right_asm)
+            },
+            Instruction::Jmp { identifier } => format!("jmp  .L{identifier}"),
+            Instruction::JmpCC { cond_code, identifier } => format!("j{cond_code:?} .L{identifier}"),
+            Instruction::SetCC { cond_code, operand } => format!("set{cond_code:?} {}", operand.to_code()),
+            Instruction::Label { identifier } => format!(".L{}", identifier),
         }
     }
 
