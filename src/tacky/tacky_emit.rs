@@ -55,22 +55,23 @@ impl TackyEmit {
                 let left_exp = left.as_ref().clone();
                 let right_exp = right.as_ref().clone();
                 let v1 = self.emit_expression(&left_exp, instructions);
-                let label_or = self.make_label_or();
-                let jump_if_not_zero_v1 = TackyInstruction::JumpIfNotZero {condition: v1, target: label_or.clone()};
+                let label_or_true = self.make_label_or_true();
+                let jump_if_not_zero_v1 = TackyInstruction::JumpIfNotZero {condition: v1, target: label_or_true.clone()};
                 let v2 = self.emit_expression(&right_exp, instructions);
-                let jump_if_not_zero_v2 = TackyInstruction::JumpIfNotZero {condition: v2, target: label_or.clone()};
+                let jump_if_not_zero_v2 = TackyInstruction::JumpIfNotZero {condition: v2, target: label_or_true.clone()};
 
                 let result = TackyVal::Var(self.make_temporary());
                 let copy_result1 = TackyInstruction::Copy {src: TackyVal::Constant(1), dst: result.clone()};
-                let jump_end = TackyInstruction::Jump {target: label_or.clone()};
-                let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
                 let label_end = self.make_label_end();
+                let jump_end = TackyInstruction::Jump {target: label_end.clone()};
+                let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
 
                 instructions.push(jump_if_not_zero_v1);
                 instructions.push(jump_if_not_zero_v2);
-                instructions.push(copy_result1);
-                instructions.push(jump_end);
                 instructions.push(copy_result0);
+                instructions.push(jump_end);
+                instructions.push(TackyInstruction::Label { identifier: label_or_true.clone() });
+                instructions.push(copy_result1);
                 instructions.push(TackyInstruction::Label { identifier: label_end.clone() });
 
                 result
@@ -79,21 +80,22 @@ impl TackyEmit {
                 let left_exp = left.as_ref().clone();
                 let right_exp = right.as_ref().clone();
                 let v1 = self.emit_expression(&left_exp, instructions);
-                let label_and = self.make_label_and();
-                let jump_if_zero_v1 = TackyInstruction::JumpIfZero {condition: v1, target: label_and.clone()};
+                let label_and_false = self.make_label_and_false();
+                let jump_if_zero_v1 = TackyInstruction::JumpIfZero {condition: v1, target: label_and_false.clone()};
                 let v2 = self.emit_expression(&right_exp, instructions);
-                let jump_if_zero_v2 = TackyInstruction::JumpIfZero {condition: v2, target: label_and.clone()};
+                let jump_if_zero_v2 = TackyInstruction::JumpIfZero {condition: v2, target: label_and_false.clone()};
 
                 let result = TackyVal::Var(self.make_temporary());
                 let copy_result1 = TackyInstruction::Copy {src: TackyVal::Constant(1), dst: result.clone()};
-                let jump_end = TackyInstruction::Jump {target: label_and.clone()};
-                let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
                 let label_end = self.make_label_end();
+                let jump_end = TackyInstruction::Jump {target: label_end.clone()};
+                let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
 
                 instructions.push(jump_if_zero_v1);
                 instructions.push(jump_if_zero_v2);
                 instructions.push(copy_result1);
                 instructions.push(jump_end);
+                instructions.push(TackyInstruction::Label { identifier: label_and_false.clone() });
                 instructions.push(copy_result0);
                 instructions.push(TackyInstruction::Label { identifier: label_end.clone() });
 
@@ -171,14 +173,14 @@ impl TackyEmit {
         tmp
     }
 
-    fn make_label_and(&mut self) -> String {
-        let tmp = String::from("label_and_") + &self.tmp_label_and_count.to_string();
+    fn make_label_and_false(&mut self) -> String {
+        let tmp = String::from("label_and_false_") + &self.tmp_label_and_count.to_string();
         self.tmp_var_count += 1;
         tmp
     }
 
-    fn make_label_or(&mut self) -> String {
-        let tmp = String::from("label_or_") + &self.tmp_label_or_count.to_string();
+    fn make_label_or_true(&mut self) -> String {
+        let tmp = String::from("label_or_true_") + &self.tmp_label_or_count.to_string();
         self.tmp_var_count += 1;
         tmp
     }
@@ -353,6 +355,8 @@ mod tests {
     use crate::ast_model::expression::AstBinaryOp::Add;
     use crate::ast_model::statement::AstStatement;
     use crate::ast_model::expression::AstUnaryOp::{BitwiseComplement, Negate};
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
 
     #[test]
     pub fn test_emit_expression_constant() {
@@ -546,7 +550,58 @@ mod tests {
                 assert_eq!(*cst1, 1);
                 assert_eq!(*cst2, 2);
                 assert_eq!(*binop, TackyBinaryOp::Add);
+            } else {
+                panic!();
             }
+        } else {
+            panic!();
         }
+    }
+
+    #[test]
+    pub fn test_bin_and() {
+        let tacky = tacky("1 && 0".to_string());
+        assert_eq!(tacky.len(), 8);
+
+        assert_eq!(tacky[0], "JumpIfZero { condition: Constant(1), target: \"label_and_false_0\" }");
+        assert_eq!(tacky[1], "JumpIfZero { condition: Constant(0), target: \"label_and_false_0\" }");
+        assert_eq!(tacky[2], "Copy { src: Constant(1), dst: Var(\"tmp.1\") }");
+        assert_eq!(tacky[3], "Jump { target: \"label_end_0\" }");
+        assert_eq!(tacky[4], "Label { identifier: \"label_and_false_0\" }");
+        assert_eq!(tacky[5], "Copy { src: Constant(0), dst: Var(\"tmp.1\") }");
+        assert_eq!(tacky[6], "Label { identifier: \"label_end_0\" }");
+        assert_eq!(tacky[7], "Return(Var(\"tmp.1\"))");
+    }
+
+
+    #[test]
+    pub fn test_bin_or() {
+        let tacky = tacky("1 || 0".to_string());
+        assert_eq!(tacky.len(), 8);
+
+        assert_eq!(tacky[0], "JumpIfNotZero { condition: Constant(1), target: \"label_or_true_0\" }");
+        assert_eq!(tacky[1], "JumpIfNotZero { condition: Constant(0), target: \"label_or_true_0\" }");
+        assert_eq!(tacky[2], "Copy { src: Constant(0), dst: Var(\"tmp.1\") }");
+        assert_eq!(tacky[3], "Jump { target: \"label_end_0\" }");
+        assert_eq!(tacky[4], "Label { identifier: \"label_or_true_0\" }");
+        assert_eq!(tacky[5], "Copy { src: Constant(1), dst: Var(\"tmp.1\") }");
+        assert_eq!(tacky[6], "Label { identifier: \"label_end_0\" }");
+        assert_eq!(tacky[7], "Return(Var(\"tmp.1\"))");
+    }
+
+    pub fn tacky(code : String) -> Vec<String> {
+        let program : String = "int main(void) { return ".to_string() + code.as_str() + "; }";
+        let lexer = Lexer::new(program);
+        let mut tokens = lexer.tokenize().unwrap();
+        let parser = Parser::new();
+        let program_result = parser.parse_program(&mut tokens).unwrap();
+
+        let mut emit = crate::tacky::tacky_emit::TackyEmit::new();
+        let tacky_program = emit.emit_program(&program_result);
+        let tacky = tacky_program.function_def.body
+            .iter()
+            .map(|tacky_inst| format!("{:?}", tacky_inst))
+            .collect();
+        tacky
     }
 }

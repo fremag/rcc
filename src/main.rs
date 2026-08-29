@@ -102,6 +102,7 @@ fn main() -> Result<(), std::io::Error> {
     let mut emit = crate::tacky::tacky_emit::TackyEmit::new();
     let tacky_program = emit.emit_program(&ast_program);
     if action == "--tacky" {
+        print!("{tacky_program:?}");
         // we only want to parse, so let's exit here
         process::exit(0);
     }

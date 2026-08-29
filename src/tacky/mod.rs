@@ -1,14 +1,17 @@
 pub(crate) mod tacky_emit;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct TackyProgram {
     pub(crate) function_def: TackyFunction,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct TackyFunction {
     pub(crate) identifier: String,
     pub(crate) body: Vec<TackyInstruction>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum TackyInstruction {
     Return(TackyVal),
     Unary(
