@@ -586,12 +586,12 @@ mod tests {
 
         assert_eq!(tacky[0], "JumpIfZero { condition: Constant(1), target: \"label_and_false_0\" }");
         assert_eq!(tacky[1], "JumpIfZero { condition: Constant(0), target: \"label_and_false_0\" }");
-        assert_eq!(tacky[2], "Copy { src: Constant(1), dst: Var(\"tmp.1\") }");
+        assert_eq!(tacky[2], "Copy { src: Constant(1), dst: Var(\"tmp.0\") }");
         assert_eq!(tacky[3], "Jump { target: \"label_end_0\" }");
         assert_eq!(tacky[4], "Label { identifier: \"label_and_false_0\" }");
-        assert_eq!(tacky[5], "Copy { src: Constant(0), dst: Var(\"tmp.1\") }");
+        assert_eq!(tacky[5], "Copy { src: Constant(0), dst: Var(\"tmp.0\") }");
         assert_eq!(tacky[6], "Label { identifier: \"label_end_0\" }");
-        assert_eq!(tacky[7], "Return(Var(\"tmp.1\"))");
+        assert_eq!(tacky[7], "Return(Var(\"tmp.0\"))");
     }
 
     #[test]
@@ -601,12 +601,12 @@ mod tests {
 
         assert_eq!(tacky[0], "JumpIfNotZero { condition: Constant(1), target: \"label_or_true_0\" }");
         assert_eq!(tacky[1], "JumpIfNotZero { condition: Constant(0), target: \"label_or_true_0\" }");
-        assert_eq!(tacky[2], "Copy { src: Constant(0), dst: Var(\"tmp.1\") }");
+        assert_eq!(tacky[2], "Copy { src: Constant(0), dst: Var(\"tmp.0\") }");
         assert_eq!(tacky[3], "Jump { target: \"label_end_0\" }");
         assert_eq!(tacky[4], "Label { identifier: \"label_or_true_0\" }");
-        assert_eq!(tacky[5], "Copy { src: Constant(1), dst: Var(\"tmp.1\") }");
+        assert_eq!(tacky[5], "Copy { src: Constant(1), dst: Var(\"tmp.0\") }");
         assert_eq!(tacky[6], "Label { identifier: \"label_end_0\" }");
-        assert_eq!(tacky[7], "Return(Var(\"tmp.1\"))");
+        assert_eq!(tacky[7], "Return(Var(\"tmp.0\"))");
     }
 
     #[test_case("1 + 0", "Binary(Add, Constant(1), Constant(0), Var(\"tmp.0\"))")]
