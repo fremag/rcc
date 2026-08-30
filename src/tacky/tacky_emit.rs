@@ -175,19 +175,19 @@ impl TackyEmit {
 
     fn make_label_and_false(&mut self) -> String {
         let tmp = String::from("label_and_false_") + &self.tmp_label_and_count.to_string();
-        self.tmp_var_count += 1;
+        self.tmp_label_and_count += 1;
         tmp
     }
 
     fn make_label_or_true(&mut self) -> String {
         let tmp = String::from("label_or_true_") + &self.tmp_label_or_count.to_string();
-        self.tmp_var_count += 1;
+        self.tmp_label_or_count += 1;
         tmp
     }
 
     fn make_label_end(&mut self) -> String {
         let tmp = String::from("label_end_") + &self.tmp_label_end_count.to_string();
-        self.tmp_var_count += 1;
+        self.tmp_label_end_count += 1;
         tmp
     }
 

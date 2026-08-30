@@ -61,6 +61,8 @@ fn main() -> Result<(), std::io::Error> {
         "Should have been able to read the file {}",
         output_file_str
     ));
+    println!("{contents}");
+    
     let lexer = Lexer::new(contents);
     let mut tokens = match lexer.tokenize() {
         Err(err_msg) => {
