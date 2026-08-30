@@ -64,6 +64,7 @@ impl Lexer {
     pub fn kw_greater_regex()       -> regex::Regex { regex::Regex::new(r"^(?<item>>)").unwrap() }
     pub fn kw_less_equal_regex()    -> regex::Regex { regex::Regex::new(r"^(?<item><=)").unwrap() }
     pub fn kw_greater_equal_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>>=)").unwrap() }
+    pub fn kw_assignment_regex()    -> regex::Regex { regex::Regex::new(r"^(?<item>=)").unwrap() }
 
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
@@ -96,6 +97,7 @@ impl Lexer {
             Lexer::kw_greater_regex(),
             Lexer::kw_less_equal_regex(),
             Lexer::kw_greater_equal_regex(),
+            Lexer::kw_assignment_regex()
         ];
 
         let mut tokens = Vec::new();

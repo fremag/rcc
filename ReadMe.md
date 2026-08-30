@@ -3,9 +3,19 @@ Learning Rust and writing a small C compiler with the book:
 Build a Real Programming Language from Scratch
 by Nora Sandler](https://nostarch.com/writing-c-compiler)
 
+<details>
+<summary>Chapter 5: local variables</summary>
+```bash
+~/writing-a-c-compiler-tests$ ./test_compiler ../rcc/target/debug/rcc --chapter 5 --stage lex
+----------------------------------------------------------------------
+Ran 147 tests in 1.971s
 
+OK
+```
 
-<details open>
+</details>
+
+<details>
 <summary>Chapter 4: Logical and relational operators</summary>
 
 ```bash
