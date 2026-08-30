@@ -57,17 +57,19 @@ impl TackyEmit {
                 let v1 = self.emit_expression(&left_exp, instructions);
                 let label_or_true = self.make_label_or_true();
                 let jump_if_not_zero_v1 = TackyInstruction::JumpIfNotZero {condition: v1, target: label_or_true.clone()};
+                instructions.push(jump_if_not_zero_v1);
+
                 let v2 = self.emit_expression(&right_exp, instructions);
                 let jump_if_not_zero_v2 = TackyInstruction::JumpIfNotZero {condition: v2, target: label_or_true.clone()};
 
                 let result = TackyVal::Var(self.make_temporary());
                 let copy_result1 = TackyInstruction::Copy {src: TackyVal::Constant(1), dst: result.clone()};
+
+                instructions.push(jump_if_not_zero_v2);
+
                 let label_end = self.make_label_end();
                 let jump_end = TackyInstruction::Jump {target: label_end.clone()};
                 let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
-
-                instructions.push(jump_if_not_zero_v1);
-                instructions.push(jump_if_not_zero_v2);
                 instructions.push(copy_result0);
                 instructions.push(jump_end);
                 instructions.push(TackyInstruction::Label { identifier: label_or_true.clone() });
@@ -82,20 +84,22 @@ impl TackyEmit {
                 let v1 = self.emit_expression(&left_exp, instructions);
                 let label_and_false = self.make_label_and_false();
                 let jump_if_zero_v1 = TackyInstruction::JumpIfZero {condition: v1, target: label_and_false.clone()};
+
+                instructions.push(jump_if_zero_v1);
+
                 let v2 = self.emit_expression(&right_exp, instructions);
                 let jump_if_zero_v2 = TackyInstruction::JumpIfZero {condition: v2, target: label_and_false.clone()};
 
+                instructions.push(jump_if_zero_v2);
+
                 let result = TackyVal::Var(self.make_temporary());
                 let copy_result1 = TackyInstruction::Copy {src: TackyVal::Constant(1), dst: result.clone()};
+                instructions.push(copy_result1);
                 let label_end = self.make_label_end();
                 let jump_end = TackyInstruction::Jump {target: label_end.clone()};
-                let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
-
-                instructions.push(jump_if_zero_v1);
-                instructions.push(jump_if_zero_v2);
-                instructions.push(copy_result1);
                 instructions.push(jump_end);
                 instructions.push(TackyInstruction::Label { identifier: label_and_false.clone() });
+                let copy_result0 = TackyInstruction::Copy {src: TackyVal::Constant(0), dst: result.clone()};
                 instructions.push(copy_result0);
                 instructions.push(TackyInstruction::Label { identifier: label_end.clone() });
 
@@ -607,6 +611,22 @@ mod tests {
         assert_eq!(tacky[5], "Copy { src: Constant(1), dst: Var(\"tmp.0\") }");
         assert_eq!(tacky[6], "Label { identifier: \"label_end_0\" }");
         assert_eq!(tacky[7], "Return(Var(\"tmp.0\"))");
+    }
+
+    #[test]
+    pub fn test_bin_or_shortcut() {
+        let tacky = tacky("0 && (1/0)".to_string());
+        assert_eq!(tacky.len(), 9);
+
+        assert_eq!(tacky[0], "JumpIfZero { condition: Constant(0), target: \"label_and_false_0\" }");
+        assert_eq!(tacky[1], "Binary(Divide, Constant(1), Constant(0), Var(\"tmp.0\"))");
+        assert_eq!(tacky[2], "JumpIfZero { condition: Var(\"tmp.0\"), target: \"label_and_false_0\" }");
+        assert_eq!(tacky[3], "Copy { src: Constant(1), dst: Var(\"tmp.1\") }");
+        assert_eq!(tacky[4], "Jump { target: \"label_end_0\" }");
+        assert_eq!(tacky[5], "Label { identifier: \"label_and_false_0\" }");
+        assert_eq!(tacky[6], "Copy { src: Constant(0), dst: Var(\"tmp.1\") }");
+        assert_eq!(tacky[7], "Label { identifier: \"label_end_0\" }");
+        assert_eq!(tacky[8], "Return(Var(\"tmp.1\"))");
     }
 
     #[test_case("1 + 0", "Binary(Add, Constant(1), Constant(0), Var(\"tmp.0\"))")]
