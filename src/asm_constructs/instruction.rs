@@ -1,7 +1,7 @@
 use crate::asm_constructs::operand::{Operand, Reg};
 use std::collections::HashMap;
 use Operand::Register;
-use crate::asm_constructs::instruction::Instruction::{Binary, Cmp, Idiv, Mov};
+use crate::asm_constructs::instruction::Instruction::{Binary, Cmp, Idiv, Mov, SetCC};
 use crate::asm_constructs::operand::Operand::{Imm, Stack};
 
 #[derive(Debug, Clone)]
@@ -220,6 +220,15 @@ impl Instruction {
                             (_, _) => None
                         }
                     },
+                }
+            },
+            Instruction::SetCC {cond_code, operand : Operand::Register {reg} } => {
+                match reg {
+                    Reg::AX => { Some(vec![SetCC {cond_code: cond_code.clone(), operand: Register {reg: Reg::A1}}])}
+                    Reg::DX => { Some(vec![SetCC {cond_code: cond_code.clone(), operand: Register {reg: Reg::D1}}])}
+                    Reg::R10 => { Some(vec![SetCC {cond_code: cond_code.clone(), operand: Register {reg: Reg::R10b}}])}
+                    Reg::R11 => { Some(vec![SetCC {cond_code: cond_code.clone(), operand: Register {reg: Reg::R11b}}])}
+                    _ => None
                 }
             },
             _ => None
