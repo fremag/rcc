@@ -3,11 +3,11 @@ use crate::asm_constructs::instruction::{BinaryOperator, CondCode, Instruction, 
 use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::operand::Operand::Register;
 use crate::asm_constructs::program::AsmProgram;
-use crate::ast_model::ast_return::AstReturn;
 use crate::ast_model::expression::{AstExpression, AstFactor, AstBinaryOp};
 use crate::ast_model::function::AstFunction;
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::expression::AstUnaryOp;
+use crate::ast_model::statement::AstStatement;
 use crate::tacky::TackyVal::Constant;
 use crate::tacky::{TackyBinaryOp, TackyFunction, TackyInstruction, TackyProgram, TackyUnaryOp, TackyVal};
 
@@ -195,13 +195,20 @@ impl TackyEmit {
         tmp
     }
 
-    pub fn emit_return(
+    pub fn emit_statement(
         &mut self,
-        ast_return: &AstReturn,
+        ast_return: &AstStatement,
         instructions: &mut Vec<TackyInstruction>,
     ) {
-        let exp = self.emit_expression(&ast_return.expression, instructions);
-        instructions.push(TackyInstruction::Return(exp));
+        match ast_return {
+            AstStatement::Return { expression } => {
+                let exp = self.emit_expression(expression, instructions);
+                let instruction_return = TackyInstruction::Return(exp);
+                instructions.push(instruction_return);
+            }
+            AstStatement::Expression { .. } => {todo!()}
+            AstStatement::Null => {todo!()}
+        }
     }
 
     pub fn emit_program(&mut self, program: &AstProgram) -> TackyProgram {
@@ -212,7 +219,7 @@ impl TackyEmit {
 
     pub fn emit_function(&mut self, function: &AstFunction) -> TackyFunction {
         let mut instructions: Vec<TackyInstruction> = Vec::new();
-        let _ = self.emit_return(&function.body.return_exp, &mut instructions);
+        let _ = self.emit_statement(&function.body.get(0).unwrap(), &mut instructions);
         TackyFunction {
             identifier: function.identifier.clone(),
             body: instructions,
@@ -453,13 +460,13 @@ mod tests {
     pub fn test_emit_return() {
         let mut emit = TackyEmit::new();
 
-        let ast_return = AstReturn {
+        let ast_return = AstStatement::Return {
             expression: AstExpression::Factor(AstFactor::Constant {
                 constant: AstConstant { value: 3 }
             })
         };
         let mut instructions: Vec<TackyInstruction> = Vec::new();
-        emit.emit_return(&ast_return, &mut instructions);
+        emit.emit_statement(&ast_return, &mut instructions);
         assert_eq!(instructions.len(), 1);
         let instruction = instructions.get(0).unwrap();
         if let TackyInstruction::Return(val) = instruction {
@@ -473,7 +480,7 @@ mod tests {
     pub fn test_emit_return_double_unary() {
         let mut emit = TackyEmit::new();
 
-        let ast_return = AstReturn {
+        let ast_return = AstStatement::Return {
             expression: AstExpression::Factor(AstFactor::Unary {
                 unary_op: Negate,
                 factor: Box::new(AstFactor::Unary {
@@ -485,7 +492,7 @@ mod tests {
             }),
         };
         let mut instructions: Vec<TackyInstruction> = Vec::new();
-        emit.emit_return(&ast_return, &mut instructions);
+        emit.emit_statement(&ast_return, &mut instructions);
         assert_eq!(instructions.len(), 3);
         let instruction = instructions.get(0).unwrap();
         if let TackyInstruction::Unary(op, src, dst) = instruction {
@@ -531,16 +538,14 @@ mod tests {
     #[test]
     pub fn test_emit_function() {
         let mut emit = TackyEmit::new();
-
+        let ast_statement_return = AstStatement::Return {
+            expression: AstExpression::Factor(AstFactor::Constant {
+                constant: AstConstant { value: 3 },
+            }),
+        };
         let function = AstFunction {
             identifier: "main".to_string(),
-            body: AstStatement {
-                return_exp: AstReturn {
-                    expression: AstExpression::Factor(AstFactor::Constant {
-                        constant: AstConstant { value: 3 },
-                    }),
-                },
-            },
+            body: vec![ast_statement_return],
         };
 
         let result = emit.emit_function(&function);
@@ -560,13 +565,11 @@ mod tests {
         let program = AstProgram {
             function: AstFunction {
                 identifier: "main".to_string(),
-                body: AstStatement {
-                    return_exp: AstReturn {
+                body: vec![AstStatement::Return {
                         expression: AstExpression::Factor(AstFactor::Constant {
                             constant: AstConstant { value: 3 },
                         }),
-                    },
-                },
+                }],
             },
         };
 

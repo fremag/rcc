@@ -1,9 +1,9 @@
-use crate::ast_model::ast_return::AstReturn;
+use AstStatement::Return;
 use crate::ast_model::constant::AstConstant;
 use crate::ast_model::expression::{AstExpression, AstFactor, AstBinaryOp, AstUnaryOp};
 use crate::ast_model::function::AstFunction;
 use crate::ast_model::program::AstProgram;
-use crate::ast_model::statement::AstStatement;
+use crate::ast_model::statement::{AstStatement};
 use crate::lexer::Lexer;
 
 pub struct Parser {
@@ -115,7 +115,7 @@ impl Parser {
         }
     }
 
-    pub(crate) fn parse_return(&self, tokens: &mut Vec<String>) -> Result<AstReturn, String> {
+    pub(crate) fn parse_return(&self, tokens: &mut Vec<String>) -> Result<AstStatement, String> {
         if tokens.len() == 0 {
             return Err("Invalid expression".to_string());
         }
@@ -132,7 +132,7 @@ impl Parser {
                 return Err("Invalid expression".to_string());
             }
             let _ = tokens.remove(0);
-            Ok(AstReturn { expression })
+            Ok(Return { expression })
         } else {
             Err("Invalid expression".to_string())
         }
@@ -140,8 +140,8 @@ impl Parser {
 
     pub(crate) fn parse_statement(&self, tokens: &mut Vec<String>) -> Result<AstStatement, String> {
         let result = self.parse_return(tokens);
-        if let Ok(return_exp) = result {
-            Ok(AstStatement { return_exp })
+        if let Ok(AstStatement::Return {expression})  = result {
+            Ok(Return { expression})
         } else {
             Err("Invalid expression".to_string())
         }
@@ -189,7 +189,7 @@ impl Parser {
         }
         let _ = tokens.remove(0);
 
-        let body = result.unwrap();
+        let body = vec![result.unwrap()];
         Ok(AstFunction { identifier, body })
     }
 
@@ -386,16 +386,10 @@ mod tests {
         let mut tokens = vec!["return".to_string(), "123".to_string(), ";".to_string()];
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), true);
-        match result.unwrap().expression {
-            AstExpression::Factor(factor) => {
-                if let AstFactor::Constant { constant: cst } = factor {
-                    assert_eq!(cst.value, 123);
-                    return;
-                } else {
-                    panic!("Invalid expression")
-                }
-            }
-            _ => panic!("Invalid expression"),
+        if let Return { expression : AstExpression::Factor(AstFactor::Constant{constant : cst}) } = result.unwrap() {
+            assert_eq!(cst.value, 123);
+        } else {
+            panic!("Invalid expression")
         }
     }
 
@@ -439,7 +433,12 @@ mod tests {
         let mut tokens = vec!["return".to_string(), "123".to_string(), ";".to_string()];
         let result = parser.parse_statement(&mut tokens);
         assert_eq!(result.is_ok(), true);
-        match result.unwrap().return_exp.expression {
+        let statement = result.unwrap();
+        let expression = match statement  {
+            AstStatement::Return { expression } => expression,
+            _ => panic!("Invalid statement"),
+        };
+        match expression {
             AstExpression::Factor(factor) => {
                 if let AstFactor::Constant { constant: cst } = factor {
                     assert_eq!(cst.value, 123);
@@ -469,7 +468,11 @@ mod tests {
         let result = parser.parse_function(&mut tokens);
         assert_eq!(result.is_ok(), true);
         let function = result.unwrap();
-        let expression = function.body.return_exp.expression;
+        let ast_statement = function.body.get(0).unwrap();
+        let expression = match ast_statement {
+            AstStatement::Return { expression } => expression,
+            _ => panic!("Invalid statement"),
+        };
         if let AstExpression::Factor(factor) = expression
         && let AstFactor::Constant{constant: cst} = factor  {
             assert_eq!(cst.value, 2);
@@ -497,8 +500,11 @@ mod tests {
 
         let result = parser.parse_program(&mut tokens);
         assert_eq!(result.is_ok(), true);
-        let function = result.unwrap();
-        let expression = function.function.body.return_exp.expression;
+        let program = result.unwrap();
+        let expression = match program.function.body.get(0).unwrap() {
+            AstStatement::Return { expression } => expression,
+            _ => panic!("Invalid statement"),
+        };
         if let AstExpression::Factor(factor) = expression
         && let AstFactor::Constant { constant: cst } = factor  {
             assert_eq!(cst.value, 2);
@@ -506,7 +512,7 @@ mod tests {
             panic!("Invalid expression")
         }
 
-        assert_eq!(function.function.identifier, "main".to_string());
+        assert_eq!(program.function.identifier, "main".to_string());
     }
 
     #[test]

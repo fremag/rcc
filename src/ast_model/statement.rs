@@ -1,6 +1,8 @@
-use crate::ast_model::ast_return::AstReturn;
+use crate::ast_model::expression::AstExpression;
 
 #[derive(Debug)]
-pub struct AstStatement {
-    pub(crate) return_exp: AstReturn,
+pub enum AstStatement {
+    Return{expression: AstExpression},
+    Expression{ expression: AstExpression},
+    Null
 }
