@@ -3,7 +3,7 @@ use crate::asm_constructs::instruction::{BinaryOperator, CondCode, Instruction, 
 use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::operand::Operand::Register;
 use crate::asm_constructs::program::AsmProgram;
-use crate::ast_model::expression::{AstExpression, AstFactor, AstBinaryOp};
+use crate::ast_model::expression::{AstExpression, AstBinaryOp};
 use crate::ast_model::function::{AstBlockItem, AstFunction};
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::expression::AstUnaryOp;
@@ -23,12 +23,16 @@ impl TackyEmit {
         Self { tmp_var_count: 0, tmp_label_and_count: 0, tmp_label_or_count: 0, tmp_label_end_count: 0 }
     }
 
-    pub fn emit_factor(&mut self, factor: &AstFactor, instructions: &mut Vec<TackyInstruction>) -> TackyVal{
-        match factor {
-            AstFactor::Constant { constant } => Constant(constant.value),
-            AstFactor::Unary { unary_op, factor } => {
+    pub fn emit_expression(
+        &mut self,
+        expression: &AstExpression,
+        instructions: &mut Vec<TackyInstruction>,
+    ) -> TackyVal {
+        match expression {
+            AstExpression::Constant { constant } => Constant(constant.value),
+            AstExpression::Unary { unary_op, factor } => {
                 let inner_factor = factor.as_ref().clone();
-                let src = self.emit_factor(&inner_factor, instructions);
+                let src = self.emit_expression(&inner_factor, instructions);
                 let dst_name = self.make_temporary();
                 let dst = TackyVal::Var(dst_name);
                 let tacky_op = TackyEmit::convert_unop(unary_op);
@@ -36,21 +40,6 @@ impl TackyEmit {
                 instructions.push(tacky_inst);
                 dst
             }
-            AstFactor::Nested(exp) => {
-                self.emit_expression(exp, instructions)
-            }
-        }
-    }
-
-    pub fn emit_expression(
-        &mut self,
-        expression: &AstExpression,
-        instructions: &mut Vec<TackyInstruction>,
-    ) -> TackyVal {
-        match expression {
-            AstExpression::Factor(factor) => {
-                self.emit_factor(factor, instructions)
-            },
             AstExpression::Binary { binop : AstBinaryOp::Or, left, right } => {
                 let left_exp = left.as_ref().clone();
                 let right_exp = right.as_ref().clone();
@@ -427,9 +416,9 @@ mod tests {
     #[test]
     pub fn test_emit_expression_constant() {
         let mut emit = TackyEmit::new();
-        let ast_exp = AstExpression::Factor(AstFactor::Constant {
+        let ast_exp = AstExpression::Constant {
             constant: AstConstant { value: 3 },
-        });
+        };
         let mut instructions: Vec<TackyInstruction> = Vec::new();
         let result = emit.emit_expression(&ast_exp, &mut instructions);
 
@@ -441,12 +430,12 @@ mod tests {
     pub fn test_emit_expression_unary() {
         let mut emit = TackyEmit::new();
 
-        let ast_exp = AstExpression::Factor(AstFactor::Unary {
+        let ast_exp = AstExpression::Unary {
             unary_op: Negate,
-            factor: Box::new(AstFactor::Constant {
+            factor: Box::new(AstExpression::Constant {
                 constant: AstConstant { value: 3 },
-            }),
-        });
+            })
+        };
         let mut instructions: Vec<TackyInstruction> = Vec::new();
         let result = emit.emit_expression(&ast_exp, &mut instructions);
 
@@ -467,9 +456,9 @@ mod tests {
         let mut emit = TackyEmit::new();
 
         let ast_return = AstStatement::Return {
-            expression: AstExpression::Factor(AstFactor::Constant {
+            expression: AstExpression::Constant {
                 constant: AstConstant { value: 3 }
-            })
+            }
         };
         let mut instructions: Vec<TackyInstruction> = Vec::new();
         emit.emit_statement(&ast_return, &mut instructions);
@@ -487,15 +476,15 @@ mod tests {
         let mut emit = TackyEmit::new();
 
         let ast_return = AstStatement::Return {
-            expression: AstExpression::Factor(AstFactor::Unary {
+            expression: AstExpression::Unary {
                 unary_op: Negate,
-                factor: Box::new(AstFactor::Unary {
+                factor: Box::new(AstExpression::Unary {
                     unary_op: BitwiseComplement,
-                    factor: Box::new(AstFactor::Constant {
+                    factor: Box::new(AstExpression::Constant {
                         constant: AstConstant { value: 3 },
                     }),
                 }),
-            }),
+            },
         };
         let mut instructions: Vec<TackyInstruction> = Vec::new();
         emit.emit_statement(&ast_return, &mut instructions);
@@ -545,9 +534,9 @@ mod tests {
     pub fn test_emit_function() {
         let mut emit = TackyEmit::new();
         let ast_statement_return = AstStatement::Return {
-            expression: AstExpression::Factor(AstFactor::Constant {
+            expression: AstExpression::Constant {
                 constant: AstConstant { value: 3 },
-            }),
+            },
         };
         let function = AstFunction {
             identifier: "main".to_string(),
@@ -571,11 +560,11 @@ mod tests {
         let program = AstProgram {
             function: AstFunction {
                 identifier: "main".to_string(),
-                body: vec![AstBlockItem::Statement(                
+                body: vec![AstBlockItem::Statement(
                     AstStatement::Return {
-                    expression: AstExpression::Factor(AstFactor::Constant {
+                        expression: AstExpression::Constant {
                             constant: AstConstant { value: 3 },
-                        }),
+                        },
                     })
                 ],
             },

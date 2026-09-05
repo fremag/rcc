@@ -1,6 +1,6 @@
 use AstStatement::Return;
 use crate::ast_model::constant::AstConstant;
-use crate::ast_model::expression::{AstExpression, AstFactor, AstBinaryOp, AstUnaryOp};
+use crate::ast_model::expression::{AstExpression, AstBinaryOp, AstUnaryOp};
 use crate::ast_model::function::{AstBlockItem, AstFunction};
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::statement::{AstStatement};
@@ -38,20 +38,20 @@ impl Parser {
         }
     }
 
-    pub(crate) fn parse_factor(&self, tokens: &mut Vec<String>) -> Result<AstFactor, String> {
+    pub(crate) fn parse_factor(&self, tokens: &mut Vec<String>) -> Result<AstExpression, String> {
         if tokens.len() == 0 {
             return Err("Empty token list".to_string())
         }
         
         if let Ok(constant) = self.parse_constant(tokens) {
-            let f = AstFactor::Constant { constant };
+            let f = AstExpression::Constant { constant };
             Ok(f)
         } else if Self::check_token(tokens, "~") 
             || Self::check_token(tokens, "-") 
             || Self::check_token(tokens, "!") {
             if let Ok(op) = self.parse_unop(tokens) {
                 if let Ok(inner_exp) = self.parse_factor(tokens) {
-                    Ok(AstFactor::Unary {
+                    Ok(AstExpression::Unary {
                         unary_op: op,
                         factor: Box::new(inner_exp),
                     })
@@ -68,7 +68,7 @@ impl Parser {
                 if token != ")" {
                     Err("Invalid expression".to_string())
                 } else {
-                    Ok(AstFactor::Nested(Box::new(inner_exp)))
+                    Ok(inner_exp)
                 }
             } else {
                 Err("Invalid expression".to_string())
@@ -84,7 +84,7 @@ impl Parser {
         min_prec: i32
     ) -> Result<AstExpression, String> {
         if let Ok(left_factor) = self.parse_factor(tokens) {
-            let mut left = AstExpression::Factor(left_factor);
+            let mut left = left_factor;
             let mut next_token = Self::peek_token(tokens);
             while Self::is_binary_op(&next_token) && Self::precedence(&next_token) >= min_prec {
                 let binop = self.parse_binop(tokens);
@@ -296,7 +296,7 @@ mod tests {
         let factor = parser.parse_factor(&mut tokens);
         assert_eq!(factor.is_ok(), true);
         match factor.unwrap() {
-            AstFactor::Constant { constant: cst } => {
+            AstExpression::Constant { constant: cst } => {
                 assert_eq!(cst.value, 123);
                 return;
             }
@@ -311,14 +311,14 @@ mod tests {
 
         let factor = parser.parse_factor(&mut tokens);
         assert_eq!(factor.is_ok(), true);
-        if let AstFactor::Unary {
+        if let AstExpression::Unary {
             unary_op,
             factor,
         } = factor.unwrap()
         {
             assert_eq!(unary_op, AstUnaryOp::BitwiseComplement);
             match factor.as_ref() {
-                AstFactor::Constant { constant: cst } => {
+                AstExpression::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
                 }
                 _ => panic!("Invalid expression"),
@@ -337,14 +337,14 @@ mod tests {
 
         let factor = parser.parse_factor(&mut tokens);
         assert_eq!(factor.is_ok(), true);
-        if  let AstFactor::Unary {
+        if  let AstExpression::Unary {
             unary_op,
             factor,
         } = factor.unwrap()
         {
             assert_eq!(unary_op, AstUnaryOp::Negate);
             match factor.as_ref() {
-                AstFactor::Constant { constant: cst } => {
+                AstExpression::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
                 }
                 _ => panic!("Invalid expression"),
@@ -369,15 +369,15 @@ mod tests {
 
         let factor = parser.parse_factor(&mut tokens);
         if let Ok(exp1) = factor
-            && let AstFactor::Unary {
+            && let AstExpression::Unary {
                 unary_op: negate1,
                 factor: factor1,
             } = exp1
-            && let AstFactor::Unary {
+            && let AstExpression::Unary {
                 unary_op: bitwise_complement,
                 factor: sub_factor2,
             } = factor1.as_ref()
-            && let AstFactor::Constant { constant: cst } = sub_factor2.as_ref()
+            && let AstExpression::Constant { constant: cst } = sub_factor2.as_ref()
         {
             assert_eq!(negate1, AstUnaryOp::Negate);
             assert_eq!(*bitwise_complement, AstUnaryOp::BitwiseComplement);
@@ -401,7 +401,7 @@ mod tests {
         let mut tokens = vec!["return".to_string(), "123".to_string(), ";".to_string()];
         let result = parser.parse_return(&mut tokens);
         assert_eq!(result.is_ok(), true);
-        if let Return { expression : AstExpression::Factor(AstFactor::Constant{constant : cst}) } = result.unwrap() {
+        if let Return { expression : AstExpression::Constant{constant : cst} } = result.unwrap() {
             assert_eq!(cst.value, 123);
         } else {
             panic!("Invalid expression")
@@ -454,13 +454,9 @@ mod tests {
             _ => panic!("Invalid statement"),
         };
         match expression {
-            AstExpression::Factor(factor) => {
-                if let AstFactor::Constant { constant: cst } = factor {
+                AstExpression::Constant { constant: cst } => {
                     assert_eq!(cst.value, 123);
-                } else {
-                    panic!("Invalid expression")
                 }
-            }
             _ => panic!("Invalid expression"),
         }
     }
@@ -488,8 +484,7 @@ mod tests {
             AstBlockItem::Statement(AstStatement::Return { expression }) => expression,
             _ => panic!("Invalid statement"),
         };
-        if let AstExpression::Factor(factor) = expression
-        && let AstFactor::Constant{constant: cst} = factor  {
+        if let crate::ast_model::expression::AstExpression::Constant{constant: cst} = expression  {
             assert_eq!(cst.value, 2);
         } else {
             panic!("Invalid expression")
@@ -520,8 +515,7 @@ mod tests {
             AstBlockItem::Statement(AstStatement::Return { expression }) => expression,
             _ => panic!("Invalid statement"),
         };
-        if let AstExpression::Factor(factor) = expression
-        && let AstFactor::Constant { constant: cst } = factor  {
+        if let AstExpression::Constant { constant: cst } = expression  {
             assert_eq!(cst.value, 2);
         } else {
             panic!("Invalid expression")
@@ -537,10 +531,10 @@ mod tests {
         let result= parser.parse_expression(&mut tokens, 0);
         assert_eq!(result.is_ok(), true);
         if let AstExpression::Binary {binop, left, right} = result.unwrap()
-        && let AstExpression::Factor(right_factor) = right.as_ref()
-        && let AstExpression::Factor(left_factor) = left.as_ref()
-            && let AstFactor::Constant{constant: right_cst} = right_factor
-            && let AstFactor::Constant{constant: left_cst} = left_factor
+        && let right_factor = right.as_ref()
+        && let left_factor = left.as_ref()
+            && let AstExpression::Constant{constant: right_cst} = right_factor
+            && let AstExpression::Constant{constant: left_cst} = left_factor
         {
             assert_eq!(binop, AstBinaryOp::Add);
             assert_eq!(left_cst.value, 1);
@@ -556,14 +550,11 @@ mod tests {
         let mut tokens = vec!["(", "1", "+", "2", ")"].iter().map(|s| s.to_string()).collect();
         let result= parser.parse_factor(&mut tokens);
         assert_eq!(result.is_ok(), true);
-        if let AstFactor::Nested(nested) = result.unwrap()
-            && let AstExpression::Binary {binop, left, right} = nested.as_ref()
-            && let AstExpression::Factor(right_factor) = right.as_ref()
-            && let AstExpression::Factor(left_factor) = left.as_ref()
-            && let AstFactor::Constant{constant: right_cst} = right_factor
-            && let AstFactor::Constant{constant: left_cst} = left_factor
+        if  let AstExpression::Binary {binop, left, right} = result.unwrap()
+            && let AstExpression::Constant{constant: right_cst} = right.as_ref()
+            && let AstExpression::Constant{constant: left_cst} = left.as_ref()
         {
-            assert_eq!(*binop, AstBinaryOp::Add);
+            assert_eq!(binop, AstBinaryOp::Add);
             assert_eq!(left_cst.value, 1);
             assert_eq!(right_cst.value, 2);
         } else {
@@ -578,15 +569,10 @@ mod tests {
         let result= parser.parse_expression(&mut tokens, 0);
         assert_eq!(result.is_ok(), true);
         if let AstExpression::Binary {binop: binop1, left, right} = result.unwrap()
-            && let AstExpression::Factor(left_factor) = left.as_ref()
-            && let AstExpression::Factor(right_factor) = right.as_ref()
-            && let AstFactor::Constant{constant: left_cst} = left_factor
-            && let AstFactor::Nested(box_nested_exp) = right_factor
-            && let AstExpression::Binary {binop: binop2, left : nested_left, right: nested_right} = box_nested_exp.as_ref()
-            && let AstExpression::Factor(left_nested_factor) = nested_left.as_ref()
-            && let AstExpression::Factor(right_nested_factor) = nested_right.as_ref()
-            && let AstFactor::Constant{constant: left_nested_cst} = left_nested_factor
-            && let AstFactor::Constant{constant: right_nested_cst} = right_nested_factor
+            && let AstExpression::Constant{constant: left_cst} = left.as_ref()
+            && let AstExpression::Binary {binop: binop2, left : nested_left, right: nested_right} = right.as_ref()
+            && let AstExpression::Constant{constant: left_nested_cst} = nested_left.as_ref()
+            && let AstExpression::Constant{constant: right_nested_cst} = nested_right.as_ref()
         {
             assert_eq!(left_cst.value, 1);
             assert_eq!(left_nested_cst.value, 2);
@@ -607,12 +593,9 @@ mod tests {
         let result_expression = result.unwrap();
         if let AstExpression::Binary {binop: binop1, left: left1, right: right1} = result_expression
             && let AstExpression::Binary{binop: binop2, left: left2, right: right2} = left1.as_ref()
-            && let AstExpression::Factor(factor1) = right1.as_ref()
-            && let AstExpression::Factor(factor2) = right2.as_ref()
-            && let AstExpression::Factor(factor3) = left2.as_ref()
-            && let AstFactor::Constant{constant: cst1} = factor1
-            && let AstFactor::Constant{constant: cst2} = factor2
-            && let AstFactor::Constant{constant: cst3} = factor3
+            && let AstExpression::Constant{constant: cst1} = right1.as_ref()
+            && let AstExpression::Constant{constant: cst2} = right2.as_ref()
+            && let AstExpression::Constant{constant: cst3} = left2.as_ref()
         {
             assert_eq!(binop1.clone(), AstBinaryOp::Add);
             assert_eq!(binop2.clone(), AstBinaryOp::Mul);
