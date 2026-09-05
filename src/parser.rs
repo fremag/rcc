@@ -1,7 +1,7 @@
 use AstStatement::Return;
 use crate::ast_model::constant::AstConstant;
 use crate::ast_model::expression::{AstExpression, AstFactor, AstBinaryOp, AstUnaryOp};
-use crate::ast_model::function::AstFunction;
+use crate::ast_model::function::{AstBlockItem, AstFunction};
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::statement::{AstStatement};
 use crate::lexer::Lexer;
@@ -17,7 +17,7 @@ impl Parser {
         }
     }
     pub fn parse_program(&self, tokens: &mut Vec<String>) -> Result<AstProgram, String> {
-        if let Ok(function) = self.parse_function(tokens) {
+        if let Ok(function) = self.parse_function_definition(tokens) {
             Ok(AstProgram { function })
         } else {
             Err("Invalid program".to_string())
@@ -148,7 +148,7 @@ impl Parser {
     }
 
     // <function> ::= "int" <identifier> "(" "void" ")" "{" <statement> "}"
-    pub(crate) fn parse_function(&self, tokens: &mut Vec<String>) -> Result<AstFunction, String> {
+    pub(crate) fn parse_function_definition(&self, tokens: &mut Vec<String>) -> Result<AstFunction, String> {
         if !Self::check_token(tokens, "int") {
             return Err("nope".to_string());
         }
@@ -179,7 +179,7 @@ impl Parser {
         }
         let _ = tokens.remove(0);
 
-        let result = self.parse_statement(tokens);
+        let result = self.parse_function_body(tokens);
         if result.is_err() {
             return Err("nope".to_string());
         }
@@ -189,7 +189,7 @@ impl Parser {
         }
         let _ = tokens.remove(0);
 
-        let body = vec![result.unwrap()];
+        let body = result.unwrap();
         Ok(AstFunction { identifier, body })
     }
 
@@ -247,6 +247,21 @@ impl Parser {
 
     fn peek_token(tokens: &Vec<String>) -> String {
         if tokens.len() > 0 { tokens[0].clone()} else { "".to_string() }
+    }
+
+    fn parse_function_body(&self, tokens: &mut Vec<String>) -> Result<Vec<AstBlockItem>, String> {
+        let mut block_items : Vec<AstBlockItem>= vec![];
+        while ! Self::check_token(tokens, "}") {
+            let next_block_item : AstBlockItem = self.parse_block_item(tokens);
+            block_items.push(next_block_item);
+        }
+
+        Ok(block_items)
+    }
+
+    fn parse_block_item(&self, tokens: &mut Vec<String>) -> AstBlockItem {
+        let exp = self.parse_statement(tokens);
+        AstBlockItem::Statement(exp.unwrap())
     }
 }
 
@@ -465,12 +480,12 @@ mod tests {
             "}"
         ].iter().map(|s| s.to_string()).collect();
 
-        let result = parser.parse_function(&mut tokens);
+        let result = parser.parse_function_definition(&mut tokens);
         assert_eq!(result.is_ok(), true);
         let function = result.unwrap();
         let ast_statement = function.body.get(0).unwrap();
         let expression = match ast_statement {
-            AstStatement::Return { expression } => expression,
+            AstBlockItem::Statement(AstStatement::Return { expression }) => expression,
             _ => panic!("Invalid statement"),
         };
         if let AstExpression::Factor(factor) = expression
@@ -502,7 +517,7 @@ mod tests {
         assert_eq!(result.is_ok(), true);
         let program = result.unwrap();
         let expression = match program.function.body.get(0).unwrap() {
-            AstStatement::Return { expression } => expression,
+            AstBlockItem::Statement(AstStatement::Return { expression }) => expression,
             _ => panic!("Invalid statement"),
         };
         if let AstExpression::Factor(factor) = expression

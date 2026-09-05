@@ -4,7 +4,7 @@ use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::operand::Operand::Register;
 use crate::asm_constructs::program::AsmProgram;
 use crate::ast_model::expression::{AstExpression, AstFactor, AstBinaryOp};
-use crate::ast_model::function::AstFunction;
+use crate::ast_model::function::{AstBlockItem, AstFunction};
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::expression::AstUnaryOp;
 use crate::ast_model::statement::AstStatement;
@@ -219,7 +219,13 @@ impl TackyEmit {
 
     pub fn emit_function(&mut self, function: &AstFunction) -> TackyFunction {
         let mut instructions: Vec<TackyInstruction> = Vec::new();
-        let _ = self.emit_statement(&function.body.get(0).unwrap(), &mut instructions);
+        let x = &function.body.get(0).unwrap();
+        let _ = match x {
+            AstBlockItem::Statement(statement) => {
+                let _ = self.emit_statement(statement, &mut instructions);
+            }
+            AstBlockItem::Declaration(_) => {}
+        };
         TackyFunction {
             identifier: function.identifier.clone(),
             body: instructions,
@@ -545,7 +551,7 @@ mod tests {
         };
         let function = AstFunction {
             identifier: "main".to_string(),
-            body: vec![ast_statement_return],
+            body: vec![AstBlockItem::Statement(ast_statement_return)],
         };
 
         let result = emit.emit_function(&function);
@@ -565,11 +571,13 @@ mod tests {
         let program = AstProgram {
             function: AstFunction {
                 identifier: "main".to_string(),
-                body: vec![AstStatement::Return {
-                        expression: AstExpression::Factor(AstFactor::Constant {
+                body: vec![AstBlockItem::Statement(                
+                    AstStatement::Return {
+                    expression: AstExpression::Factor(AstFactor::Constant {
                             constant: AstConstant { value: 3 },
                         }),
-                }],
+                    })
+                ],
             },
         };
 
