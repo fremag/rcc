@@ -1,7 +1,7 @@
 use AstStatement::Return;
 use crate::ast_model::constant::AstConstant;
 use crate::ast_model::expression::{AstExpression, AstBinaryOp, AstUnaryOp};
-use crate::ast_model::function::{AstBlockItem, AstFunction};
+use crate::ast_model::function::{AstBlockItem, AstDeclaration, AstFunction};
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::statement::{AstStatement};
 use crate::lexer::Lexer;
@@ -74,7 +74,8 @@ impl Parser {
                 Err("Invalid expression".to_string())
             }
         } else {
-            Err(format!("Invalid factor: {}", &tokens[0]))
+            let identifier = tokens.remove(0);
+            Ok(AstExpression::Var {identifier })
         }
     }
 
@@ -83,23 +84,35 @@ impl Parser {
         tokens: &mut Vec<String>,
         min_prec: i32
     ) -> Result<AstExpression, String> {
-        if let Ok(left_factor) = self.parse_factor(tokens) {
+        let factor = self.parse_factor(tokens);
+        if let Ok(left_factor) = factor {
             let mut left = left_factor;
             let mut next_token = Self::peek_token(tokens);
             while Self::is_binary_op(&next_token) && Self::precedence(&next_token) >= min_prec {
-                let binop = self.parse_binop(tokens);
-                let next_token_precedence = Self::precedence(&next_token) + 1;
-                let right_factor = self.parse_expression(tokens, next_token_precedence);
-                if let Ok(right) = right_factor {
-                    let left_exp = Box::new(left);
-                    let right_exp = Box::new(right);
-                    left = AstExpression::Binary {binop, left: left_exp , right: right_exp };
+                if next_token == "=" {
+                   let _ = tokens.remove(0);
+                    let next_token_precedence = Self::precedence(&next_token) ;
+                    let right_exp = self.parse_expression(tokens, next_token_precedence);
+                    if let Ok(right) = right_exp {
+                        left = AstExpression::Assignment { left: Box::new(left), right: Box::new(right) };
+                    } else {
+                        return Err("Invalid expression".to_string());
+                    }
                 } else {
-                    return Err("Invalid expression".to_string());
+                    let binop = self.parse_binop(tokens);
+                    let next_token_precedence = Self::precedence(&next_token) + 1;
+                    let right_exp = self.parse_expression(tokens, next_token_precedence);
+                    if let Ok(right) = right_exp {
+                        left = AstExpression::Binary { binop, left: Box::new(left), right: Box::new(right) };
+                    } else {
+                        return Err("Invalid expression".to_string());
+                    }
                 }
                 next_token = Self::peek_token(tokens);
             }
             Ok(left)
+        } else if let Err(msg) = factor {
+            Err(format!("Invalid expression: '{msg}'"))
         } else {
             Err("Invalid expression".to_string())
         }
@@ -241,6 +254,7 @@ impl Parser {
             "==" | "!=" => 30,
             "&&" => 10,
             "||" => 5,
+            "=" => 1,
             _ => panic!("Unknown precedence ! ({})", token)
         }
     }
@@ -252,16 +266,42 @@ impl Parser {
     fn parse_function_body(&self, tokens: &mut Vec<String>) -> Result<Vec<AstBlockItem>, String> {
         let mut block_items : Vec<AstBlockItem>= vec![];
         while ! Self::check_token(tokens, "}") {
-            let next_block_item : AstBlockItem = self.parse_block_item(tokens);
-            block_items.push(next_block_item);
+            if let Ok(next_block_item) = self.parse_block_item(tokens) {
+                block_items.push(next_block_item);
+            } else {
+                return Err("Invalid block".to_string());
+            }
         }
 
         Ok(block_items)
     }
 
-    fn parse_block_item(&self, tokens: &mut Vec<String>) -> AstBlockItem {
-        let exp = self.parse_statement(tokens);
-        AstBlockItem::Statement(exp.unwrap())
+    fn parse_block_item(&self, tokens: &mut Vec<String>) -> Result<AstBlockItem, String> {
+        let block_item;
+        if Self::check_token(tokens, "int") {
+            let _ = tokens.remove(0);
+            let identifier = tokens.remove(0);
+            if Self::check_token(tokens, "=") {
+                let _ = tokens.remove(0);
+                let init_exp = self.parse_expression(tokens, 0);
+                if let Ok(expression) = init_exp {
+                    block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: Some(expression)})
+                } else {
+                    return Err("Invalid expression".to_string());
+                }
+            } else {
+                block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: None })
+            }
+        } else {
+            let statement = self.parse_statement(tokens);
+            if let Ok(statement) = statement {
+                block_item = AstBlockItem::Statement(statement)
+            } else {
+                return Err("Invalid statement".to_string());
+            }
+        }
+
+        Ok(block_item)
     }
 }
 

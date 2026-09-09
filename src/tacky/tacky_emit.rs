@@ -107,6 +107,8 @@ impl TackyEmit {
                 instructions.push(tacky_inst);
                 dst
             }
+            AstExpression::Var { .. } => { todo!()}
+            AstExpression::Assignment { .. } => {todo!()}
         }
     }
 
