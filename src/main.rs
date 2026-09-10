@@ -85,11 +85,16 @@ fn main() -> Result<(), std::io::Error> {
     let parser = Parser::new();
 
     let program_result = parser.parse_program(&mut tokens);
-    if let Err(_) = program_result {
+    if let Err(msg) = program_result {
+        print!("Invalid program ! {msg}");
         process::exit(1);
     }
 
     if tokens.len() != 0 {
+        print!("Something failed: some tokens were not parsed !");
+        for token in tokens  {
+            println!("{token}");
+        }
         process::exit(1);
     }
 

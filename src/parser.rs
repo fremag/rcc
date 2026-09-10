@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use AstStatement::Return;
 use crate::ast_model::constant::AstConstant;
 use crate::ast_model::expression::{AstExpression, AstBinaryOp, AstUnaryOp};
@@ -8,12 +9,19 @@ use crate::lexer::Lexer;
 
 pub struct Parser {
     regex: regex::Regex,
+    keywords : HashSet<String>,
 }
 
 impl Parser {
     pub fn new() -> Self {
+        let mut keywords = HashSet::new();
+        keywords.insert("int".to_string());
+        keywords.insert("void".to_string());
+        keywords.insert("return".to_string());
+
         Self {
             regex: Lexer::identifier_regex(),
+            keywords,
         }
     }
     pub fn parse_program(&self, tokens: &mut Vec<String>) -> Result<AstProgram, String> {
@@ -59,23 +67,27 @@ impl Parser {
                     Err("Invalid unary operator".to_string())
                 }
             } else {
-                Err("Invalid expression".to_string())
+                Err("Invalid factor".to_string())
             }
         } else if Self::check_token(tokens,"(") {
             tokens.remove(0);
             if let Ok(inner_exp) = self.parse_expression(tokens, 0) {
                 let token = tokens.remove(0);
                 if token != ")" {
-                    Err("Invalid expression".to_string())
+                    Err("Invalid factor".to_string())
                 } else {
                     Ok(inner_exp)
                 }
             } else {
-                Err("Invalid expression".to_string())
+                Err("Invalid factor".to_string())
             }
         } else {
             let identifier = tokens.remove(0);
-            Ok(AstExpression::Var {identifier })
+            if self.check_identifier(&identifier) {
+                return Ok(AstExpression::Var {identifier })
+            }
+
+            Err(format!("Invalid identifier: {identifier:?}"))
         }
     }
 
@@ -152,11 +164,29 @@ impl Parser {
     }
 
     pub(crate) fn parse_statement(&self, tokens: &mut Vec<String>) -> Result<AstStatement, String> {
-        let result = self.parse_return(tokens);
-        if let Ok(AstStatement::Return {expression})  = result {
-            Ok(Return { expression})
+        if Self::check_token(tokens, "return") {
+            let result = self.parse_return(tokens);
+            if let Ok(AstStatement::Return {expression})  = result {
+                Ok(Return { expression })
+            }
+            else {
+                Err("Invalid return expression".to_string())
+            }
+        } else if Self::check_token(tokens, ";") {
+            let _ = tokens.remove(0);
+            Ok(AstStatement::Null)
         } else {
-            Err("Invalid expression".to_string())
+            let exp = self.parse_expression(tokens, 0);
+            if tokens.len() == 0 || tokens[0] != ";" {
+                return Err("Invalid expression".to_string());
+            }
+            let _ = tokens.remove(0);
+            
+            if let Ok(expression) = exp {
+                return Ok(AstStatement::Expression {expression })
+            } else {
+                Err("Invalid expression".to_string())
+            }
         }
     }
 
@@ -217,7 +247,7 @@ impl Parser {
         if token.len() == 0 {
             return false;
         }
-        self.regex.is_match(&token)
+        self.regex.is_match(&token) && ! self.keywords.contains(token)
     }
 
     fn parse_binop(&self, tokens: &mut Vec<String>) -> AstBinaryOp {
@@ -243,7 +273,9 @@ impl Parser {
     fn is_binary_op(token: &String) -> bool {
         token == "+" || token == "-" || token == "*" || token == "/" || token == "%" || 
         token == "<" || token == "<=" || token == ">" || token == ">=" ||
-        token == "==" || token == "!=" || token == "&&" || token == "||" 
+        token == "==" || token == "!=" || token == "&&" || token == "||" || 
+        token == "="
+        
     }
 
     fn precedence(token: &String) -> i32 {
@@ -284,12 +316,18 @@ impl Parser {
             if Self::check_token(tokens, "=") {
                 let _ = tokens.remove(0);
                 let init_exp = self.parse_expression(tokens, 0);
+                if Self::check_token(tokens, ";") {
+                    let _ = tokens.remove(0);
+                } else {
+                    return Err("Invalid expression: expected ;".to_string());
+                }
                 if let Ok(expression) = init_exp {
                     block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: Some(expression)})
                 } else {
                     return Err("Invalid expression".to_string());
                 }
             } else {
+                let _ = tokens.remove(0);
                 block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: None })
             }
         } else {
