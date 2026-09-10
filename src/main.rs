@@ -3,6 +3,7 @@ pub mod ast_model;
 pub mod lexer;
 pub mod parser;
 mod tacky;
+mod resolve;
 
 use crate::lexer::Lexer;
 use crate::parser::Parser;
@@ -11,6 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 use std::process::Command;
+use crate::resolve::Resolver;
 
 fn change_extension(input_file: &str, extension: &str) -> PathBuf {
     let mut output_file = PathBuf::from(input_file);
@@ -106,11 +108,21 @@ fn main() -> Result<(), std::io::Error> {
         process::exit(0);
     }
 
+    let resolver = Resolver::new();
+    let ast_program = resolver.resolve(&ast_program);
+    if action == "--validate" {
+        print!("{ast_program:?}");
+
+        // we only want to validate, so let's exit here
+        process::exit(0);
+    }
+
+
     let mut emit = crate::tacky::tacky_emit::TackyEmit::new();
     let tacky_program = emit.emit_program(&ast_program);
     print!("{tacky_program:?}");
     if action == "--tacky" {
-        // we only want to parse, so let's exit here
+        // we only want to emit tacky, so let's exit here
         process::exit(0);
     }
 
