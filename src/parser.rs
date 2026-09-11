@@ -22,10 +22,13 @@ impl Parser {
         }
     }
     pub fn parse_program(&self, tokens: &mut Vec<String>) -> Result<AstProgram, String> {
-        if let Ok(function) = self.parse_function_definition(tokens) {
-            Ok(AstProgram { function })
-        } else {
-            Err("Invalid program".to_string())
+        match self.parse_function_definition(tokens) {
+            Ok(function) => {
+                Ok(AstProgram { function })
+            }
+            Err(msg) => {
+                Err(format!("Invalid program: {msg}"))
+            }
         }
     }
 
@@ -221,7 +224,7 @@ impl Parser {
 
         let result = self.parse_function_body(tokens);
         if result.is_err() {
-            return Err("nope".to_string());
+            return Err(result.unwrap_err());
         }
 
         if !Self::check_token(tokens, "}") {
@@ -295,10 +298,13 @@ impl Parser {
     fn parse_function_body(&self, tokens: &mut Vec<String>) -> Result<Vec<AstBlockItem>, String> {
         let mut block_items : Vec<AstBlockItem>= vec![];
         while ! Self::check_token(tokens, "}") {
-            if let Ok(next_block_item) = self.parse_block_item(tokens) {
-                block_items.push(next_block_item);
-            } else {
-                return Err("Invalid block".to_string());
+            match self.parse_block_item(tokens) {
+                Ok(next_block_item) => {
+                    block_items.push(next_block_item);
+                }
+                Err(msg) => {
+                    return Err(format!("Invalid block: {}", msg));
+                }
             }
         }
 

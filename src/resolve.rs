@@ -137,3 +137,72 @@ impl Resolver {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
+    use super::*;
+    use test_case::test_case;
+
+    #[test]
+    fn test_resolve_declaration() {
+        let result = resolve("return 42;");
+        assert!(result.is_ok());
+        let expected = vec!["Statement(Return { expression: Constant { constant: AstConstant { value: 42 } } })"];
+        check(result.unwrap(), expected)
+    }
+
+    #[test]
+    fn test_resolve_declaration_1() {
+        let result = resolve("int x = 42; return x;");
+        assert!(result.is_ok());
+        let expected = vec![
+            "Declaration(AstDeclaration { identifier: \"x-0\", init: Some(Constant { constant: AstConstant { value: 42 } }) })",
+            "Statement(Return { expression: Var { identifier: \"x-0\" } })"
+        ];
+
+        check(result.unwrap(), expected)
+    }
+
+    #[test_case("return x;", "Undeclared variable ! x ")]
+    #[test_case("int 42 = 10;", "Invalid program: Invalid block: Invalid identifier: 42")]
+    pub fn test_failed_resolve_declaration(code : &str, expected_error : &str) {
+        let result = resolve(code);
+        assert!(result.is_err());
+        assert_eq!(format!("{}", result.unwrap_err()), expected_error);
+    }
+
+    pub fn resolve(code : &str) -> Result<Vec<String>, String> {
+        let program: String = format!("int main(void) {{{code}}}");
+        let lexer = Lexer::new(program);
+        let mut tokens = lexer.tokenize().unwrap();
+        let parser = Parser::new();
+        let program_result = parser.parse_program(&mut tokens);
+        if let Err(error) = program_result {
+            return Err(error);
+        }
+        
+        let resolver = Resolver::new();
+        let resolved_function =  resolver.resolve_function(&program_result.unwrap().function);
+
+        match resolved_function {
+            Ok(function) => {
+                let txt : Vec<String>= function.body.iter().map(|block_item | format!("{block_item:?}")).collect();
+                Ok(txt)
+            }
+            Err(msg) => Err(msg)
+        }
+    }
+
+    pub fn check(lines1 : Vec<String>, lines2 : Vec<&str>) {
+        if lines1.len() != lines2.len() {
+            panic!("{lines1:?}\n{lines2:?}")
+        }
+
+        for (i, line) in lines1.iter().enumerate() {
+            let other_line = lines2.get(i).unwrap();
+            assert_eq!(line, other_line);
+        }
+    }
+}
