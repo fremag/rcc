@@ -14,10 +14,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new() -> Self {
-        let mut keywords = HashSet::new();
-        keywords.insert("int".to_string());
-        keywords.insert("void".to_string());
-        keywords.insert("return".to_string());
+        let keywords : HashSet<String> = vec!["int", "void", "return"].into_iter().map( |keyword| keyword.to_string()).collect();
 
         Self {
             regex: Lexer::identifier_regex(),
@@ -313,6 +310,9 @@ impl Parser {
         if Self::check_token(tokens, "int") {
             let _ = tokens.remove(0);
             let identifier = tokens.remove(0);
+            if ! self.check_identifier(&identifier) {
+                return Err(format!("Invalid identifier: {identifier}"));
+            }
             if Self::check_token(tokens, "=") {
                 let _ = tokens.remove(0);
                 let init_exp = self.parse_expression(tokens, 0);

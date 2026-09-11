@@ -109,7 +109,12 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     let resolver = Resolver::new();
-    let ast_program = resolver.resolve(&ast_program);
+    let resolved_ast_program = resolver.resolve(&ast_program);
+    if resolved_ast_program.is_err() {
+        print!("Failed to resolve program {ast_program:?}");
+        process::exit(1);
+    }
+
     if action == "--validate" {
         print!("{ast_program:?}");
 
@@ -119,7 +124,7 @@ fn main() -> Result<(), std::io::Error> {
 
 
     let mut emit = crate::tacky::tacky_emit::TackyEmit::new();
-    let tacky_program = emit.emit_program(&ast_program);
+    let tacky_program = emit.emit_program(&resolved_ast_program.unwrap());
     print!("{tacky_program:?}");
     if action == "--tacky" {
         // we only want to emit tacky, so let's exit here
