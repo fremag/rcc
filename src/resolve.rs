@@ -165,15 +165,28 @@ mod tests {
         check(result.unwrap(), expected)
     }
 
+    #[test]
+    fn test_resolve_declaration_two_variables() {
+        let result = resolve("int x = 42; int y = 12; return x;");
+        assert!(result.is_ok());
+        let expected = vec![
+            "Declaration(AstDeclaration { identifier: \"x-0\", init: Some(Constant { constant: AstConstant { value: 42 } }) })",
+            "Declaration(AstDeclaration { identifier: \"y-1\", init: Some(Constant { constant: AstConstant { value: 12 } }) })",
+            "Statement(Return { expression: Var { identifier: \"x-0\" } })"
+        ];
+
+        check(result.unwrap(), expected)
+    }
+
     #[test_case("return x;", "Undeclared variable ! x ")]
     #[test_case("int 42 = 10;", "Invalid program: Invalid block: Invalid identifier: 42")]
-    pub fn test_failed_resolve_declaration(code : &str, expected_error : &str) {
+    pub fn test_failed_resolve_declaration(code: &str, expected_error: &str) {
         let result = resolve(code);
         assert!(result.is_err());
         assert_eq!(format!("{}", result.unwrap_err()), expected_error);
     }
 
-    pub fn resolve(code : &str) -> Result<Vec<String>, String> {
+    pub fn resolve(code: &str) -> Result<Vec<String>, String> {
         let program: String = format!("int main(void) {{{code}}}");
         let lexer = Lexer::new(program);
         let mut tokens = lexer.tokenize().unwrap();
@@ -182,20 +195,20 @@ mod tests {
         if let Err(error) = program_result {
             return Err(error);
         }
-        
+
         let resolver = Resolver::new();
-        let resolved_function =  resolver.resolve_function(&program_result.unwrap().function);
+        let resolved_function = resolver.resolve_function(&program_result.unwrap().function);
 
         match resolved_function {
             Ok(function) => {
-                let txt : Vec<String>= function.body.iter().map(|block_item | format!("{block_item:?}")).collect();
+                let txt: Vec<String> = function.body.iter().map(|block_item| format!("{block_item:?}")).collect();
                 Ok(txt)
             }
             Err(msg) => Err(msg)
         }
     }
 
-    pub fn check(lines1 : Vec<String>, lines2 : Vec<&str>) {
+    pub fn check(lines1: Vec<String>, lines2: Vec<&str>) {
         if lines1.len() != lines2.len() {
             panic!("{lines1:?}\n{lines2:?}")
         }
@@ -206,3 +219,4 @@ mod tests {
         }
     }
 }
+ 

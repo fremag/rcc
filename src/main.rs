@@ -4,6 +4,7 @@ pub mod lexer;
 pub mod parser;
 mod tacky;
 mod resolve;
+mod utils;
 
 use crate::lexer::Lexer;
 use crate::parser::Parser;
@@ -116,7 +117,9 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     if action == "--validate" {
-        print!("{ast_program:?}");
+        let prog = format!("{ast_program:?}");
+        let fmt_prog = utils::format_ast(prog);
+        print!("{fmt_prog}");
 
         // we only want to validate, so let's exit here
         process::exit(0);
