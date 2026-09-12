@@ -5,13 +5,69 @@ by Nora Sandler](https://nostarch.com/writing-c-compiler)
 
 <details>
 <summary>Chapter 5: local variables</summary>
+
 ```bash
-~/writing-a-c-compiler-tests$ ./test_compiler ../rcc/target/debug/rcc --chapter 5 --stage lex
+~/writing-a-c-compiler-tests$./test_compiler ../rcc/target/debug/rcc --chapter 5
 ----------------------------------------------------------------------
-Ran 147 tests in 1.971s
+Ran 147 tests in 13.774s
 
 OK
 ```
+
+```c
+int main(void) {
+    int first_variable = 1;
+    int second_variable = 2;
+    return first_variable + second_variable;
+}
+```
+
+```
+TackyProgram  {
+  function_def: TackyFunction  {
+    identifier: "main",
+    body: [
+      Copy  {
+        src: Constant(1),
+        dst: Var("first_variable-0") 
+      },
+      Copy  {
+        src: Constant(2),
+        dst: Var("second_variable-1") 
+      },
+      Binary(Add,
+      Var("first_variable-0"),
+      Var("second_variable-1"),
+      Var("tmp.0")),
+      Return(Var("tmp.0")),
+      Return(Constant(0))
+    ] 
+  } 
+}       
+```
+```asm
+.globl main
+main:
+        pushq %rbp
+        movq %rsp, %rbp
+        subq $12, %rsp
+        movl $1, -4(%rbp)
+        movl $2, -8(%rbp)
+        movl -4(%rbp), %r10d
+        movl %r10d, -12(%rbp)
+        movl -8(%rbp), %r10d
+        addl %r10d, -12(%rbp) 
+        movl -12(%rbp), %eax
+        movq %rbp, %rsp
+        popq %rbp
+        ret
+        movl $0, %eax
+        movq %rbp, %rsp
+        popq %rbp
+        ret
+        .section .note.GNU-stack,"",@progbits
+```
+
 
 </details>
 

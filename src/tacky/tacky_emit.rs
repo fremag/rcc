@@ -4,7 +4,7 @@ use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::operand::Operand::Register;
 use crate::asm_constructs::program::AsmProgram;
 use crate::ast_model::expression::{AstExpression, AstBinaryOp};
-use crate::ast_model::function::{AstBlockItem, AstFunction};
+use crate::ast_model::function::{AstBlockItem, AstDeclaration, AstFunction};
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::expression::AstUnaryOp;
 use crate::ast_model::statement::AstStatement;
@@ -107,8 +107,18 @@ impl TackyEmit {
                 instructions.push(tacky_inst);
                 dst
             }
-            AstExpression::Var { .. } => { todo!()}
-            AstExpression::Assignment { .. } => {todo!()}
+            AstExpression::Var { identifier } => TackyVal::Var(identifier.clone()),
+            AstExpression::Assignment { left, right } => {
+                let result = self.emit_expression(right, instructions);
+                let var_name = match left.as_ref() {
+                    AstExpression::Var { identifier } => identifier.clone(),
+                    _ => unreachable!(),
+                };
+                let var = TackyVal::Var(var_name);
+                let copy = TackyInstruction::Copy { src: result, dst: var.clone() };
+                instructions.push(copy);
+                var
+            }
         }
     }
 
@@ -142,8 +152,7 @@ impl TackyEmit {
         match ast_unary_op {
             TackyUnaryOp::Negate => UnaryOperator::Neg,
             TackyUnaryOp::Complement => UnaryOperator::Not,
-            TackyUnaryOp::Not => todo!(),
-            
+            TackyUnaryOp::Not => panic!("invalid unary operator"),
         }
     }
 
@@ -152,12 +161,6 @@ impl TackyEmit {
             TackyBinaryOp::Add => BinaryOperator::Add,
             TackyBinaryOp::Subtract =>  BinaryOperator::Sub,
             TackyBinaryOp::Multiply =>  BinaryOperator::Mul,
-            TackyBinaryOp::NotEqual => todo!(),
-            TackyBinaryOp::Equal => todo!(),
-            TackyBinaryOp::LessThan  => todo!(),
-            TackyBinaryOp::LessOrEqual => todo!(),
-            TackyBinaryOp::GreaterThan  => todo!(),
-            TackyBinaryOp::GreaterOrEqual => todo!(),
             _ => panic!("invalid binary operator"),
         }
     }
@@ -188,17 +191,19 @@ impl TackyEmit {
 
     pub fn emit_statement(
         &mut self,
-        ast_return: &AstStatement,
+        ast_statement: &AstStatement,
         instructions: &mut Vec<TackyInstruction>,
     ) {
-        match ast_return {
+        match ast_statement {
             AstStatement::Return { expression } => {
                 let exp = self.emit_expression(expression, instructions);
                 let instruction_return = TackyInstruction::Return(exp);
                 instructions.push(instruction_return);
             }
-            AstStatement::Expression { .. } => {todo!()}
-            AstStatement::Null => {todo!()}
+            AstStatement::Expression { expression } => {
+                let _ = self.emit_expression(expression, instructions); // we don't use expression's result value
+            }
+            AstStatement::Null => { } // Nothing to do
         }
     }
 
@@ -210,13 +215,19 @@ impl TackyEmit {
 
     pub fn emit_function(&mut self, function: &AstFunction) -> TackyFunction {
         let mut instructions: Vec<TackyInstruction> = Vec::new();
-        let x = &function.body.get(0).unwrap();
-        let _ = match x {
-            AstBlockItem::Statement(statement) => {
-                let _ = self.emit_statement(statement, &mut instructions);
-            }
-            AstBlockItem::Declaration(_) => {}
-        };
+        for block_item in function.body.iter() {
+            let _ = match block_item {
+                AstBlockItem::Statement(statement) => {
+                    let _ = self.emit_statement(statement, &mut instructions);
+                }
+                AstBlockItem::Declaration(ast_declaration) => {
+                    let _ = self.emit_declaration(ast_declaration, &mut instructions);
+                }
+            };
+        }
+
+        instructions.push(TackyInstruction::Return(TackyVal::Constant(0)));
+
         TackyFunction {
             identifier: function.identifier.clone(),
             body: instructions,
@@ -362,6 +373,15 @@ impl TackyEmit {
             }
         } else {
             unreachable!();
+        }
+    }
+
+    fn emit_declaration(&mut self, ast_declaration: &AstDeclaration, instructions: &mut Vec<TackyInstruction>) {
+        if let Some(init_expression) = &ast_declaration.init {
+            let src = self.emit_expression(init_expression, instructions);
+            let dst = TackyVal::Var(ast_declaration.identifier.clone());
+            let copy = TackyInstruction::Copy {src, dst};
+            instructions.push(copy);
         }
     }
 }

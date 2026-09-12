@@ -128,7 +128,7 @@ fn main() -> Result<(), std::io::Error> {
 
     let mut emit = crate::tacky::tacky_emit::TackyEmit::new();
     let tacky_program = emit.emit_program(&resolved_ast_program.unwrap());
-    print!("{tacky_program:?}");
+    print!("{}", utils::format_ast(format!("{tacky_program:?}")));
     if action == "--tacky" {
         // we only want to emit tacky, so let's exit here
         process::exit(0);
