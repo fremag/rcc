@@ -78,3 +78,17 @@ pub fn format_ast(input: String) -> String {
 
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::format_ast;
+
+    #[test]
+    fn format_ast_test() {
+        let txt = "AstProgram { function: AstFunction { identifier: \"main\", body: [Declaration(AstDeclaration { identifier: \"first_variable\", init: Some(Constant { constant: AstConstant { value: 1 } }) }), Declaration(AstDeclaration { identifier: \"second_variable\", init: Some(Constant { constant: AstConstant { value: 2 } }) }), Statement(Return { expression: Binary { left: Var { identifier: \"first_variable\" }, binop: Add, right: Var { identifier: \"second_variable\" } } })] } }";
+        let indent_txt = format_ast(String::from(txt));
+
+        assert_eq!(indent_txt,  "AstProgram  {\n  function: AstFunction  {\n    identifier: \"main\",\n    body: [\n      Declaration(AstDeclaration  {\n        identifier: \"first_variable\",\n        init: Some(Constant  {\n          constant: AstConstant  {\n            value: 1 \n          } \n        }) \n      }),\n      Declaration(AstDeclaration  {\n        identifier: \"second_variable\",\n        init: Some(Constant  {\n          constant: AstConstant  {\n            value: 2 \n          } \n        }) \n      }),\n      Statement(Return  {\n        expression: Binary  {\n          left: Var  {\n            identifier: \"first_variable\" \n          },\n          binop: Add,\n          right: Var  {\n            identifier: \"second_variable\" \n          } \n        } \n      })\n    ] \n  } \n}");
+    }
+
+}
