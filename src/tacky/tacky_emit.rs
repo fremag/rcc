@@ -567,7 +567,7 @@ mod tests {
 
         let result = emit.emit_function(&function);
         assert_eq!(result.identifier, "main");
-        assert_eq!(result.body.len(), 1);
+        assert_eq!(result.body.len(), 2);
         let instruction = result.body.get(0).unwrap();
         if let TackyInstruction::Return(val) = instruction {
             assert_eq!(val, &Constant(3));
@@ -594,7 +594,7 @@ mod tests {
 
         let result = emit.emit_program(&program);
         assert_eq!(result.function_def.identifier, "main");
-        assert_eq!(result.function_def.body.len(), 1);
+        assert_eq!(result.function_def.body.len(), 2);
 
         let instruction = result.function_def.body.get(0).unwrap();
         if let TackyInstruction::Return(val) = instruction {
@@ -608,7 +608,7 @@ mod tests {
     #[test]
     pub fn test_bin_and() {
         let tacky = tacky("1 && 0".to_string());
-        assert_eq!(tacky.len(), 8);
+        assert_eq!(tacky.len(), 9);
 
         assert_eq!(tacky[0], "JumpIfZero { condition: Constant(1), target: \"label_and_false_0\" }");
         assert_eq!(tacky[1], "JumpIfZero { condition: Constant(0), target: \"label_and_false_0\" }");
@@ -618,12 +618,13 @@ mod tests {
         assert_eq!(tacky[5], "Copy { src: Constant(0), dst: Var(\"tmp.0\") }");
         assert_eq!(tacky[6], "Label { identifier: \"label_end_0\" }");
         assert_eq!(tacky[7], "Return(Var(\"tmp.0\"))");
+        assert_eq!(tacky[8], "Return(Constant(0))");
     }
 
     #[test]
     pub fn test_bin_or() {
         let tacky = tacky("1 || 0".to_string());
-        assert_eq!(tacky.len(), 8);
+        assert_eq!(tacky.len(), 9);
 
         assert_eq!(tacky[0], "JumpIfNotZero { condition: Constant(1), target: \"label_or_true_0\" }");
         assert_eq!(tacky[1], "JumpIfNotZero { condition: Constant(0), target: \"label_or_true_0\" }");
@@ -633,12 +634,13 @@ mod tests {
         assert_eq!(tacky[5], "Copy { src: Constant(1), dst: Var(\"tmp.0\") }");
         assert_eq!(tacky[6], "Label { identifier: \"label_end_0\" }");
         assert_eq!(tacky[7], "Return(Var(\"tmp.0\"))");
+        assert_eq!(tacky[8], "Return(Constant(0))");
     }
 
     #[test]
     pub fn test_bin_or_shortcut() {
         let tacky = tacky("0 && (1/0)".to_string());
-        assert_eq!(tacky.len(), 9);
+        assert_eq!(tacky.len(), 10);
 
         assert_eq!(tacky[0], "JumpIfZero { condition: Constant(0), target: \"label_and_false_0\" }");
         assert_eq!(tacky[1], "Binary(Divide, Constant(1), Constant(0), Var(\"tmp.0\"))");
@@ -649,6 +651,7 @@ mod tests {
         assert_eq!(tacky[6], "Copy { src: Constant(0), dst: Var(\"tmp.1\") }");
         assert_eq!(tacky[7], "Label { identifier: \"label_end_0\" }");
         assert_eq!(tacky[8], "Return(Var(\"tmp.1\"))");
+        assert_eq!(tacky[9], "Return(Constant(0))");
     }
 
     #[test_case("1 + 0", "Binary(Add, Constant(1), Constant(0), Var(\"tmp.0\"))")]
@@ -664,7 +667,7 @@ mod tests {
     #[test_case("1 >= 0", "Binary(GreaterOrEqual, Constant(1), Constant(0), Var(\"tmp.0\"))")]
     pub fn test_bin_op(code: &str, expected: &str) {
         let tacky = tacky(code.to_string());
-        assert_eq!(tacky.len(), 2);
+        assert_eq!(tacky.len(), 3);
         assert_eq!(tacky[0], expected);
     }
 
