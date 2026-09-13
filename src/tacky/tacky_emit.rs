@@ -36,7 +36,7 @@ impl TackyEmit {
                 let dst_name = self.make_temporary();
                 let dst = TackyVal::Var(dst_name);
                 let tacky_op = TackyEmit::convert_unop(unary_op);
-                let tacky_inst = TackyInstruction::Unary(tacky_op, src, dst.clone());
+                let tacky_inst = TackyInstruction::Unary{unary_op: tacky_op, src, dst: dst.clone()};
                 instructions.push(tacky_inst);
                 dst
             }
@@ -103,7 +103,7 @@ impl TackyEmit {
                 let dst_name = self.make_temporary();
                 let dst = TackyVal::Var(dst_name);
                 let tacky_op = TackyEmit::convert_binop(binop);
-                let tacky_inst = TackyInstruction::Binary(tacky_op, v1, v2, dst.clone());
+                let tacky_inst = TackyInstruction::Binary{binary_op: tacky_op, src1: v1, src2:  v2, dst: dst.clone()};
                 instructions.push(tacky_inst);
                 dst
             }
@@ -261,7 +261,7 @@ impl TackyEmit {
                 let mov = Instruction::Mov { src, dest };
                 instructions.push(mov);
                 instructions.push(Instruction::Ret {});
-            } else if let TackyInstruction::Unary(TackyUnaryOp::Not , src, dst) = tacky_instruction {
+            } else if let TackyInstruction::Unary{unary_op: TackyUnaryOp::Not , src, dst} = tacky_instruction {
                 let src = self.value_to_asm(&src);
                 let dest = self.value_to_asm(&dst);
                 let cmp = Instruction::Cmp {left: Operand::Imm {value: 0}, right: src };
@@ -270,30 +270,30 @@ impl TackyEmit {
                 instructions.push(cmp);
                 instructions.push(mov);
                 instructions.push(set_cc);
-            } else if let TackyInstruction::Unary(op, src, dst) = tacky_instruction {
+            } else if let TackyInstruction::Unary {unary_op, src, dst} = tacky_instruction {
                 let src = self.value_to_asm(&src);
                 let dest = self.value_to_asm(&dst);
                 let mov = Instruction::Mov { src, dest };
                 instructions.push(mov);
 
-                let unary_operator = Self::convert_asm_unop(op);
+                let unary_operator = Self::convert_asm_unop(unary_op);
                 let dest2 = self.value_to_asm(&dst);
                 let unary = Instruction::Unary {
                     unary_operator,
                     operand: dest2,
                 };
                 instructions.push(unary);
-            } else if let TackyInstruction::Binary(op, src1, src2, dst) = tacky_instruction {
+            } else if let TackyInstruction::Binary { binary_op, src1, src2, dst} = tacky_instruction {
                 let src1 = self.value_to_asm(&src1);
                 let src2 = self.value_to_asm(&src2);
                 let dest = self.value_to_asm(&dst);
 
-                match op {
+                match binary_op {
                     TackyBinaryOp::Add | TackyBinaryOp::Subtract | TackyBinaryOp::Multiply |
                     TackyBinaryOp::BitwiseAnd | TackyBinaryOp::BitwiseOr | TackyBinaryOp::BitwiseXor |
                     TackyBinaryOp::LeftShift | TackyBinaryOp::RightShift => {
                         let mov = Instruction::Mov { src: src1, dest: dest.clone() };
-                        let binop = Self::convert_asm_binop(op);
+                        let binop = Self::convert_asm_binop(binary_op);
                         let bin = Instruction::Binary {binary_operator: binop, left: src2, right: dest };
                         instructions.push(mov);
                         instructions.push(bin);
@@ -476,7 +476,7 @@ mod tests {
         assert_eq!(result, TackyVal::Var(String::from("tmp.0")));
         assert_eq!(instructions.len(), 1);
         let instruction = instructions.get(0).unwrap();
-        if let TackyInstruction::Unary(op, src, dst) = instruction {
+        if let TackyInstruction::Unary{unary_op: op, src, dst} = instruction {
             assert_eq!(op, &TackyUnaryOp::Negate);
             assert_eq!(src, &Constant(3));
             assert_eq!(dst, &TackyVal::Var(String::from("tmp.0")));
@@ -524,14 +524,14 @@ mod tests {
         emit.emit_statement(&ast_return, &mut instructions);
         assert_eq!(instructions.len(), 3);
         let instruction = instructions.get(0).unwrap();
-        if let TackyInstruction::Unary(op, src, dst) = instruction {
-            assert_eq!(op, &TackyUnaryOp::Complement);
+        if let TackyInstruction::Unary { unary_op, src, dst} = instruction {
+            assert_eq!(unary_op, &TackyUnaryOp::Complement);
             assert_eq!(src, &Constant(3));
             assert_eq!(dst, &TackyVal::Var(String::from("tmp.0")));
         }
         let instruction = instructions.get(1).unwrap();
-        if let TackyInstruction::Unary(op, src, dst) = instruction {
-            assert_eq!(op, &TackyUnaryOp::Negate);
+        if let TackyInstruction::Unary{unary_op, src, dst} = instruction {
+            assert_eq!(unary_op, &TackyUnaryOp::Negate);
             assert_eq!(src, &TackyVal::Var(String::from("tmp.0")));
             assert_eq!(dst, &TackyVal::Var(String::from("tmp.1")));
         } else {

@@ -14,17 +14,17 @@ pub struct TackyFunction {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TackyInstruction {
     Return(TackyVal),
-    Unary(
-        TackyUnaryOp,
-        TackyVal, /* src */
-        TackyVal, /* dst */
-    ),
-    Binary(
-        TackyBinaryOp,
-        TackyVal, /* src 1 */
-        TackyVal, /* src 2 */
-        TackyVal, /* dst */
-    ),
+    Unary {
+        unary_op: TackyUnaryOp,
+        src : TackyVal, /* src */
+        dst : TackyVal, /* dst */
+    },
+    Binary {
+        binary_op: TackyBinaryOp,
+        src1: TackyVal, /* src 1 */
+        src2: TackyVal, /* src 2 */
+        dst: TackyVal, /* dst */
+    },
     Copy{src: TackyVal, dst: TackyVal},
     Label{identifier: String},
     Jump{target : String},
