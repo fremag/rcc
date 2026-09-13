@@ -66,6 +66,12 @@ impl Lexer {
     pub fn kw_greater_equal_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>>=)").unwrap() }
     pub fn kw_assignment_regex()    -> regex::Regex { regex::Regex::new(r"^(?<item>=)").unwrap() }
 
+    pub fn kw_bitwise_and_regex()           -> regex::Regex { regex::Regex::new(r"^(?<item>&)").unwrap() }
+    pub fn kw_bitwise_or_regex()            -> regex::Regex { regex::Regex::new(r"^(?<item>\|)").unwrap() }
+    pub fn kw_bitwise_xor_regex()           -> regex::Regex { regex::Regex::new(r"^(?<item>\^)").unwrap() }
+    pub fn kw_bitwise_left_shift_regex()    -> regex::Regex { regex::Regex::new(r"^(?<item><<)").unwrap() }
+    pub fn kw_bitwise_right_shift_regex()   -> regex::Regex { regex::Regex::new(r"^(?<item>>>)").unwrap() }
+
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
             return Err("Input is empty".to_string());
@@ -97,7 +103,12 @@ impl Lexer {
             Lexer::kw_greater_regex(),
             Lexer::kw_less_equal_regex(),
             Lexer::kw_greater_equal_regex(),
-            Lexer::kw_assignment_regex()
+            Lexer::kw_assignment_regex(),
+            Lexer::kw_bitwise_and_regex(),
+            Lexer::kw_bitwise_or_regex(),
+            Lexer::kw_bitwise_xor_regex(),
+            Lexer::kw_bitwise_left_shift_regex(),
+            Lexer::kw_bitwise_right_shift_regex(),
         ];
 
         let mut tokens = Vec::new();
@@ -447,6 +458,55 @@ mod tests {
     #[test_case("a", ">=", ">=")]
     fn greater_equal_regex(_name: &str, value: &str, expected: &str) {
         let re = Lexer::kw_greater_equal_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "&", "&")]
+    fn bitwise_and_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bitwise_and_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "|", "|")]
+    fn bitwise_or_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bitwise_or_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("a", "^", "^")]
+    fn bitwise_xor_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bitwise_xor_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+    
+    #[test_case("a", "<<", "<<")]
+    fn bitwise_left_shift_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bitwise_left_shift_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+    #[test_case("a", ">>", ">>")]
+    fn bitwise_right_shift_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bitwise_right_shift_regex();
         let x = match re.captures(value) {
             None => "xxx",
             Some(caps) => caps.name("item").unwrap().as_str(),

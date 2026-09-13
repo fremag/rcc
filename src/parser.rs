@@ -266,6 +266,11 @@ impl Parser {
             "!=" => AstBinaryOp::NotEqual,
             "&&" => AstBinaryOp::And,
             "||" => AstBinaryOp::Or,
+            "&" => AstBinaryOp::BitwiseAnd,
+            "|" => AstBinaryOp::BitwiseOr,
+            "^" => AstBinaryOp::BitwiseXor,
+            "<<" => AstBinaryOp::LeftShift,
+            ">>" => AstBinaryOp::RightShift,
             _ => panic!("Invalid binary operator ! {}", token.as_str())
         }
     }
@@ -273,9 +278,9 @@ impl Parser {
     fn is_binary_op(token: &String) -> bool {
         token == "+" || token == "-" || token == "*" || token == "/" || token == "%" || 
         token == "<" || token == "<=" || token == ">" || token == ">=" ||
-        token == "==" || token == "!=" || token == "&&" || token == "||" || 
+        token == "==" || token == "!=" || token == "&&" || token == "||" ||
+        token == "&" || token == "|" || token == "^" || token == "<<" || token == ">>" ||
         token == "="
-        
     }
 
     fn precedence(token: &String) -> i32 {
@@ -284,10 +289,11 @@ impl Parser {
             "+" | "-" => 45,
             "<" | "<=" | ">" | ">=" => 35,
             "==" | "!=" => 30,
-            "&&" => 10,
-            "||" => 5,
+            "<<" | ">>" => 15,
+            "&&" | "&" => 10,
+            "||" | "|" | "^" => 5,
             "=" => 1,
-            _ => panic!("Unknown precedence ! ({})", token)
+            _ => panic!("Unknown precedence ! ({token})")
         }
     }
 

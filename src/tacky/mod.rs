@@ -52,5 +52,6 @@ pub enum TackyBinaryOp {
     Multiply,
     Divide,
     Modulo,
-    Equal, NotEqual, LessThan, LessOrEqual, GreaterThan, GreaterOrEqual
+    Equal, NotEqual, LessThan, LessOrEqual, GreaterThan, GreaterOrEqual,
+    BitwiseAnd, BitwiseOr, BitwiseXor, LeftShift, RightShift
 }

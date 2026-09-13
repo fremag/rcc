@@ -145,6 +145,11 @@ impl TackyEmit {
             AstBinaryOp::LessThanEqual => TackyBinaryOp::LessOrEqual,
             AstBinaryOp::GreaterThan => TackyBinaryOp::GreaterThan,
             AstBinaryOp::GreaterThanEqual => TackyBinaryOp::GreaterOrEqual,
+            AstBinaryOp::BitwiseAnd => TackyBinaryOp::BitwiseAnd,
+            AstBinaryOp::BitwiseOr => TackyBinaryOp::BitwiseOr,
+            AstBinaryOp::BitwiseXor => TackyBinaryOp::BitwiseXor,
+            AstBinaryOp::LeftShift => TackyBinaryOp::LeftShift,
+            AstBinaryOp::RightShift => TackyBinaryOp::RightShift,
         }
     }
 
@@ -312,6 +317,11 @@ impl TackyEmit {
                     TackyBinaryOp::GreaterOrEqual  => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::GE); }
                     TackyBinaryOp::LessThan   => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::L); }
                     TackyBinaryOp::LessOrEqual => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::LE); }
+                    TackyBinaryOp::BitwiseAnd => {}
+                    TackyBinaryOp::BitwiseOr => {}
+                    TackyBinaryOp::BitwiseXor => {}
+                    TackyBinaryOp::LeftShift => {}
+                    TackyBinaryOp::RightShift => {}
                 }
             }
             else if let TackyInstruction::JumpIfZero {condition, target} = tacky_instruction {
