@@ -3,13 +3,13 @@ Learning Rust and writing a small C compiler with the book:
 Build a Real Programming Language from Scratch
 by Nora Sandler](https://nostarch.com/writing-c-compiler)
 
-<details>
+<details open>
 <summary>Chapter 5: local variables</summary>
 
 ```bash
-~/writing-a-c-compiler-tests$./test_compiler ../rcc/target/debug/rcc --chapter 5
+~/writing-a-c-compiler-tests$ ./test_compiler ../rcc/target/debug/rcc --chapter 5  --bitwise
 ----------------------------------------------------------------------
-Ran 147 tests in 13.774s
+Ran 168 tests in 16.653s
 
 OK
 ```
@@ -35,16 +35,19 @@ TackyProgram  {
         src: Constant(2),
         dst: Var("second_variable-1") 
       },
-      Binary(Add,
-      Var("first_variable-0"),
-      Var("second_variable-1"),
-      Var("tmp.0")),
+      Binary  {
+        binary_op: Add,
+        src1: Var("first_variable-0"),
+        src2: Var("second_variable-1"),
+        dst: Var("tmp.0") 
+      },
       Return(Var("tmp.0")),
       Return(Constant(0))
     ] 
   } 
-}       
+} 
 ```
+
 ```asm
 .globl main
 main:

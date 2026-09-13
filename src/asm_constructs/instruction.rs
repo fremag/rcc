@@ -267,8 +267,8 @@ impl Instruction {
                         match (left, right) {
                             (Stack { offset: offset_src }, Stack { offset: offset_dest }) => {
                                 Some(vec![
-                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::R10 } },
-                                    Binary {binary_operator: BinaryOperator::LeftShift, left: Register { reg: Reg::R10 }, right: Stack { offset: *offset_dest } },
+                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::ECX } },
+                                    Binary {binary_operator: BinaryOperator::LeftShift, left: Register { reg: Reg::CL }, right: Stack { offset: *offset_dest } },
                                 ])
                             },
                             (_, _) => None
@@ -278,8 +278,8 @@ impl Instruction {
                         match (left, right) {
                             (Stack { offset: offset_src }, Stack { offset: offset_dest }) => {
                                 Some(vec![
-                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::R10 } },
-                                    Binary {binary_operator: BinaryOperator::RightShift, left: Register { reg: Reg::R10 }, right: Stack { offset: *offset_dest } },
+                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::ECX } },
+                                    Binary {binary_operator: BinaryOperator::RightShift, left: Register { reg: Reg::CL }, right: Stack { offset: *offset_dest } },
                                 ])
                             },
                             (_, _) => None

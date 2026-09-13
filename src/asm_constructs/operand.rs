@@ -18,7 +18,9 @@ pub enum Reg {
     A1,
     D1,
     R10b,
-    R11b
+    R11b,
+    ECX,
+    CL
 }
 
 impl Operand {
@@ -35,6 +37,8 @@ impl Operand {
                 Reg::D1 => String::from("%d1"),
                 Reg::R10b => String::from("%r10b"),
                 Reg::R11b => String::from("%r11b"),
+                Reg::ECX => String::from("%ecx"),
+                Reg::CL => String::from("%cl"),
             },
             Operand::Stack { offset } => format!("-{}(%rbp)", offset),
         }
