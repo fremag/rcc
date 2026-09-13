@@ -18,6 +18,8 @@ pub enum BinaryOperator {
     BitwiseAnd,
     BitwiseOr,
     BitwiseXor,
+    LeftShift,
+    RightShift
 }
 
 #[derive(Debug, Clone)]
@@ -88,7 +90,9 @@ impl Instruction {
                     BinaryOperator::Mul => "imull",
                     BinaryOperator::BitwiseAnd => "andl",
                     BinaryOperator::BitwiseOr => "orl",
-                    BinaryOperator::BitwiseXor => "xorl"
+                    BinaryOperator::BitwiseXor => "xorl",
+                    BinaryOperator::LeftShift => "sall",
+                    BinaryOperator::RightShift => "sarl"
                 };
                 let left_asm = left.to_code();
                 let right_asm = right.to_code();
@@ -259,7 +263,29 @@ impl Instruction {
                             (_, _) => None
                         }
                     },
-                    
+                    BinaryOperator::LeftShift => {
+                        match (left, right) {
+                            (Stack { offset: offset_src }, Stack { offset: offset_dest }) => {
+                                Some(vec![
+                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::R10 } },
+                                    Binary {binary_operator: BinaryOperator::LeftShift, left: Register { reg: Reg::R10 }, right: Stack { offset: *offset_dest } },
+                                ])
+                            },
+                            (_, _) => None
+                        }
+                    },
+                    BinaryOperator::RightShift => {
+                        match (left, right) {
+                            (Stack { offset: offset_src }, Stack { offset: offset_dest }) => {
+                                Some(vec![
+                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::R10 } },
+                                    Binary {binary_operator: BinaryOperator::RightShift, left: Register { reg: Reg::R10 }, right: Stack { offset: *offset_dest } },
+                                ])
+                            },
+                            (_, _) => None
+                        }
+                    },
+
                 }
             },
             Instruction::SetCC {cond_code, operand : Operand::Register {reg} } => {

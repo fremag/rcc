@@ -157,7 +157,7 @@ impl TackyEmit {
         match ast_unary_op {
             TackyUnaryOp::Negate => UnaryOperator::Neg,
             TackyUnaryOp::Complement => UnaryOperator::Not,
-            TackyUnaryOp::Not => panic!("invalid unary operator"),
+            TackyUnaryOp::Not => panic!("invalid unary operator: {ast_unary_op:?}"),
         }
     }
 
@@ -169,7 +169,9 @@ impl TackyEmit {
             TackyBinaryOp::BitwiseAnd =>  BinaryOperator::BitwiseAnd,
             TackyBinaryOp::BitwiseOr =>  BinaryOperator::BitwiseOr,
             TackyBinaryOp::BitwiseXor =>  BinaryOperator::BitwiseXor,
-            _ => panic!("invalid binary operator"),
+            TackyBinaryOp::LeftShift =>  BinaryOperator::LeftShift,
+            TackyBinaryOp::RightShift =>  BinaryOperator::RightShift,
+            _ => panic!("invalid binary operator {ast_binary_op:?}"),
         }
     }
 
@@ -288,7 +290,8 @@ impl TackyEmit {
 
                 match op {
                     TackyBinaryOp::Add | TackyBinaryOp::Subtract | TackyBinaryOp::Multiply |
-                    TackyBinaryOp::BitwiseAnd | TackyBinaryOp::BitwiseOr | TackyBinaryOp::BitwiseXor=> {
+                    TackyBinaryOp::BitwiseAnd | TackyBinaryOp::BitwiseOr | TackyBinaryOp::BitwiseXor |
+                    TackyBinaryOp::LeftShift | TackyBinaryOp::RightShift => {
                         let mov = Instruction::Mov { src: src1, dest: dest.clone() };
                         let binop = Self::convert_asm_binop(op);
                         let bin = Instruction::Binary {binary_operator: binop, left: src2, right: dest };
@@ -321,8 +324,6 @@ impl TackyEmit {
                     TackyBinaryOp::GreaterOrEqual  => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::GE); }
                     TackyBinaryOp::LessThan   => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::L); }
                     TackyBinaryOp::LessOrEqual => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::LE); }
-                    TackyBinaryOp::LeftShift => {}
-                    TackyBinaryOp::RightShift => {}
                 }
             }
             else if let TackyInstruction::JumpIfZero {condition, target} = tacky_instruction {
