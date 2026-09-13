@@ -15,6 +15,9 @@ pub enum BinaryOperator {
     Add,
     Sub,
     Mul,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
 }
 
 #[derive(Debug, Clone)]
@@ -83,6 +86,9 @@ impl Instruction {
                     BinaryOperator::Add => "addl",
                     BinaryOperator::Sub => "subl",
                     BinaryOperator::Mul => "imull",
+                    BinaryOperator::BitwiseAnd => "andl",
+                    BinaryOperator::BitwiseOr => "orl",
+                    BinaryOperator::BitwiseXor => "xorl"
                 };
                 let left_asm = left.to_code();
                 let right_asm = right.to_code();
@@ -220,6 +226,40 @@ impl Instruction {
                             (_, _) => None
                         }
                     },
+                    BinaryOperator::BitwiseAnd => {
+                        match (left, right) {
+                            (Stack { offset: offset_src }, Stack { offset: offset_dest }) => {
+                                Some(vec![
+                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::R10 } },
+                                    Binary {binary_operator: BinaryOperator::BitwiseAnd, left: Register { reg: Reg::R10 }, right: Stack { offset: *offset_dest } },
+                                ])
+                            },
+                            (_, _) => None
+                        }
+                    },
+                    BinaryOperator::BitwiseOr => {
+                        match (left, right) {
+                            (Stack { offset: offset_src }, Stack { offset: offset_dest }) => {
+                                Some(vec![
+                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::R10 } },
+                                    Binary {binary_operator: BinaryOperator::BitwiseOr, left: Register { reg: Reg::R10 }, right: Stack { offset: *offset_dest } },
+                                ])
+                            },
+                            (_, _) => None
+                        }
+                    },
+                    BinaryOperator::BitwiseXor => {
+                        match (left, right) {
+                            (Stack { offset: offset_src }, Stack { offset: offset_dest }) => {
+                                Some(vec![
+                                    Mov { src: Stack { offset: *offset_src }, dest: Register { reg: Reg::R10 } },
+                                    Binary {binary_operator: BinaryOperator::BitwiseXor, left: Register { reg: Reg::R10 }, right: Stack { offset: *offset_dest } },
+                                ])
+                            },
+                            (_, _) => None
+                        }
+                    },
+                    
                 }
             },
             Instruction::SetCC {cond_code, operand : Operand::Register {reg} } => {

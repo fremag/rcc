@@ -166,6 +166,9 @@ impl TackyEmit {
             TackyBinaryOp::Add => BinaryOperator::Add,
             TackyBinaryOp::Subtract =>  BinaryOperator::Sub,
             TackyBinaryOp::Multiply =>  BinaryOperator::Mul,
+            TackyBinaryOp::BitwiseAnd =>  BinaryOperator::BitwiseAnd,
+            TackyBinaryOp::BitwiseOr =>  BinaryOperator::BitwiseOr,
+            TackyBinaryOp::BitwiseXor =>  BinaryOperator::BitwiseXor,
             _ => panic!("invalid binary operator"),
         }
     }
@@ -284,7 +287,8 @@ impl TackyEmit {
                 let dest = self.value_to_asm(&dst);
 
                 match op {
-                    TackyBinaryOp::Add | TackyBinaryOp::Subtract | TackyBinaryOp::Multiply => {
+                    TackyBinaryOp::Add | TackyBinaryOp::Subtract | TackyBinaryOp::Multiply |
+                    TackyBinaryOp::BitwiseAnd | TackyBinaryOp::BitwiseOr | TackyBinaryOp::BitwiseXor=> {
                         let mov = Instruction::Mov { src: src1, dest: dest.clone() };
                         let binop = Self::convert_asm_binop(op);
                         let bin = Instruction::Binary {binary_operator: binop, left: src2, right: dest };
@@ -317,9 +321,6 @@ impl TackyEmit {
                     TackyBinaryOp::GreaterOrEqual  => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::GE); }
                     TackyBinaryOp::LessThan   => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::L); }
                     TackyBinaryOp::LessOrEqual => { add_relational_operator_instructions(&mut instructions, src1, src2, dest, CondCode::LE); }
-                    TackyBinaryOp::BitwiseAnd => {}
-                    TackyBinaryOp::BitwiseOr => {}
-                    TackyBinaryOp::BitwiseXor => {}
                     TackyBinaryOp::LeftShift => {}
                     TackyBinaryOp::RightShift => {}
                 }
