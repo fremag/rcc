@@ -655,7 +655,7 @@ mod tests {
         assert_eq!(tacky.len(), 10);
 
         assert_eq!(tacky[0], "JumpIfZero { condition: Constant(0), target: \"label_and_false_0\" }");
-        assert_eq!(tacky[1], "Binary(Divide, Constant(1), Constant(0), Var(\"tmp.0\"))");
+        assert_eq!(tacky[1], "Binary { binary_op: Divide, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }");
         assert_eq!(tacky[2], "JumpIfZero { condition: Var(\"tmp.0\"), target: \"label_and_false_0\" }");
         assert_eq!(tacky[3], "Copy { src: Constant(1), dst: Var(\"tmp.1\") }");
         assert_eq!(tacky[4], "Jump { target: \"label_end_0\" }");
@@ -666,17 +666,17 @@ mod tests {
         assert_eq!(tacky[9], "Return(Constant(0))");
     }
 
-    #[test_case("1 + 0", "Binary(Add, Constant(1), Constant(0), Var(\"tmp.0\"))")]
-    #[test_case("1 - 0", "Binary(Subtract, Constant(1), Constant(0), Var(\"tmp.0\"))")]
-    #[test_case("1 / 0", "Binary(Divide, Constant(1), Constant(0), Var(\"tmp.0\"))")]
-    #[test_case("1 * 0", "Binary(Multiply, Constant(1), Constant(0), Var(\"tmp.0\"))")]
-    #[test_case("1 % 0", "Binary(Modulo, Constant(1), Constant(0), Var(\"tmp.0\"))")]
-    #[test_case("1 == 0", "Binary(Equal, Constant(1), Constant(0), Var(\"tmp.0\"))")]
-    #[test_case("1 != 0", "Binary(NotEqual, Constant(1), Constant(0), Var(\"tmp.0\"))")]
-    #[test_case("1 < 0", "Binary(LessThan, Constant(1), Constant(0), Var(\"tmp.0\"))")]
-    #[test_case("1 <= 0", "Binary(LessOrEqual, Constant(1), Constant(0), Var(\"tmp.0\"))")]
-    #[test_case("1 > 0", "Binary(GreaterThan, Constant(1), Constant(0), Var(\"tmp.0\"))")]
-    #[test_case("1 >= 0", "Binary(GreaterOrEqual, Constant(1), Constant(0), Var(\"tmp.0\"))")]
+    #[test_case("1 + 0", "Binary { binary_op: Add, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
+    #[test_case("1 - 0", "Binary { binary_op: Subtract, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
+    #[test_case("1 / 0", "Binary { binary_op: Divide, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
+    #[test_case("1 * 0", "Binary { binary_op: Multiply, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
+    #[test_case("1 % 0", "Binary { binary_op: Modulo, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
+    #[test_case("1 == 0", "Binary { binary_op: Equal, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
+    #[test_case("1 != 0", "Binary { binary_op: NotEqual, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
+    #[test_case("1 < 0", "Binary { binary_op: LessThan, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
+    #[test_case("1 <= 0", "Binary { binary_op: LessOrEqual, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
+    #[test_case("1 > 0", "Binary { binary_op: GreaterThan, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
+    #[test_case("1 >= 0", "Binary { binary_op: GreaterOrEqual, src1: Constant(1), src2: Constant(0), dst: Var(\"tmp.0\") }")]
     pub fn test_bin_op(code: &str, expected: &str) {
         let tacky = tacky(code.to_string());
         assert_eq!(tacky.len(), 3);
