@@ -71,6 +71,9 @@ impl Lexer {
     pub fn kw_bitwise_xor_regex()           -> regex::Regex { regex::Regex::new(r"^(?<item>\^)").unwrap() }
     pub fn kw_bitwise_left_shift_regex()    -> regex::Regex { regex::Regex::new(r"^(?<item><<)").unwrap() }
     pub fn kw_bitwise_right_shift_regex()   -> regex::Regex { regex::Regex::new(r"^(?<item>>>)").unwrap() }
+    
+    pub fn kw_increment_regex()   -> regex::Regex { regex::Regex::new(r"^(?<item>\+\+)").unwrap() }
+    pub fn kw_decrement_regex()   -> regex::Regex { regex::Regex::new(r"^(?<item>--)").unwrap() }
 
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
@@ -507,6 +510,24 @@ mod tests {
     #[test_case("a", ">>", ">>")]
     fn bitwise_right_shift_regex(_name: &str, value: &str, expected: &str) {
         let re = Lexer::kw_bitwise_right_shift_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+    #[test_case("a", "++", "++")]
+    fn increment_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_increment_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+    #[test_case("decrement", "--", "--")]
+    fn decrement_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_decrement_regex();
         let x = match re.captures(value) {
             None => "xxx",
             Some(caps) => caps.name("item").unwrap().as_str(),
