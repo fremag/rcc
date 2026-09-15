@@ -75,6 +75,12 @@ impl Lexer {
     pub fn kw_increment_regex()   -> regex::Regex { regex::Regex::new(r"^(?<item>\+\+)").unwrap() }
     pub fn kw_decrement_regex()   -> regex::Regex { regex::Regex::new(r"^(?<item>--)").unwrap() }
 
+    pub fn kw_bin_op_add_equals_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>\+=)").unwrap() }
+    pub fn kw_bin_op_sub_equals_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>-=)").unwrap() }
+    pub fn kw_bin_op_mul_equals_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>\*=)").unwrap() }
+    pub fn kw_bin_op_div_equals_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>/=)").unwrap() }
+    pub fn kw_bin_op_mod_equals_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>%=)").unwrap() }
+
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
             return Err("Input is empty".to_string());
@@ -112,6 +118,11 @@ impl Lexer {
             Lexer::kw_bitwise_xor_regex(),
             Lexer::kw_bitwise_left_shift_regex(),
             Lexer::kw_bitwise_right_shift_regex(),
+            Lexer::kw_bin_op_add_equals_regex(),
+            Lexer::kw_bin_op_sub_equals_regex(),
+            Lexer::kw_bin_op_mul_equals_regex(),
+            Lexer::kw_bin_op_div_equals_regex(),
+            Lexer::kw_bin_op_mod_equals_regex(),
         ];
 
         let mut tokens = Vec::new();
@@ -528,6 +539,56 @@ mod tests {
     #[test_case("decrement", "--", "--")]
     fn decrement_regex(_name: &str, value: &str, expected: &str) {
         let re = Lexer::kw_decrement_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("add_equals", "+=", "+=")]
+    fn add_equals_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bin_op_add_equals_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("sub equals", "-=", "-=")]
+    fn sub_equals_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bin_op_sub_equals_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("div equals", "/=", "/=")]
+    fn div_equals_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bin_op_div_equals_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("mul equals", "*=", "*=")]
+    fn mul_equals_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bin_op_mul_equals_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("mod equals", "%=", "%=")]
+    fn mod_equals_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_bin_op_mod_equals_regex();
         let x = match re.captures(value) {
             None => "xxx",
             Some(caps) => caps.name("item").unwrap().as_str(),
