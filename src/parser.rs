@@ -102,11 +102,24 @@ impl Parser {
             let mut next_token = Self::peek_token(tokens);
             while Self::is_binary_op(&next_token) && Self::precedence(&next_token) >= min_prec {
                 if next_token == "=" {
-                   let _ = tokens.remove(0);
-                    let next_token_precedence = Self::precedence(&next_token) ;
+                    let _ = tokens.remove(0);
+                    let next_token_precedence = Self::precedence(&next_token);
                     let right_exp = self.parse_expression(tokens, next_token_precedence);
                     if let Ok(right) = right_exp {
                         left = AstExpression::Assignment { left: Box::new(left), right: Box::new(right) };
+                    } else {
+                        return Err("Invalid expression".to_string());
+                    }
+                } else if Self::is_compound_op(&next_token) {
+                    let binop = self.parse_binop(tokens);
+                    let next_token_precedence = Self::precedence(&next_token); // it's not like real binary op so precedence is not changing
+                    let right_exp = self.parse_expression(tokens, next_token_precedence);
+                    if let Ok(right) = right_exp {
+                        if let AstExpression::Var{..} = &left {
+                            left = AstExpression::Binary { binop, left: Box::new(left), right: Box::new(right) };
+                        } else {
+                            return Err("Invalid expression".to_string());
+                        }
                     } else {
                         return Err("Invalid expression".to_string());
                     }
@@ -271,16 +284,26 @@ impl Parser {
             "^" => AstBinaryOp::BitwiseXor,
             "<<" => AstBinaryOp::LeftShift,
             ">>" => AstBinaryOp::RightShift,
+            "+=" => AstBinaryOp::AddEquals,
+            "-=" => AstBinaryOp::SubEquals,
+            "*=" => AstBinaryOp::MulEquals,
+            "/=" => AstBinaryOp::DivEquals,
+            "%=" => AstBinaryOp::ModEquals,
             _ => panic!("Invalid binary operator ! {}", token.as_str())
         }
     }
 
     fn is_binary_op(token: &String) -> bool {
-        token == "+" || token == "-" || token == "*" || token == "/" || token == "%" || 
-        token == "<" || token == "<=" || token == ">" || token == ">=" ||
+        token == "+"  || token == "-" || token == "*" || token == "/" || token == "%" || 
+        token == "<"  || token == "<=" || token == ">" || token == ">=" ||
         token == "==" || token == "!=" || token == "&&" || token == "||" ||
-        token == "&" || token == "|" || token == "^" || token == "<<" || token == ">>" ||
-        token == "="
+        token == "&"  || token == "|" || token == "^" || token == "<<" || token == ">>" ||
+        token == "="  || 
+        token == "+=" || token == "-=" || token == "*=" || token == "/=" || token == "%="
+    }
+
+    fn is_compound_op(token: &String) -> bool {
+        token == "+=" || token == "-=" || token == "*=" || token == "/=" || token == "%="
     }
 
     fn precedence(token: &String) -> i32 {
@@ -295,7 +318,7 @@ impl Parser {
             "|" => 15,
             "&&" => 10,
             "||" => 5,
-            "=" => 1,
+            "=" | "+=" | "-=" | "*=" | "/=" | "%="=> 1,
             _ => panic!("Unknown precedence ! ({token})")
         }
     }

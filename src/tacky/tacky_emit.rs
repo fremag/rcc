@@ -94,14 +94,20 @@ impl TackyEmit {
 
                 result
             }
+
             AstExpression::Binary { binop, left, right } => {
                 let left_exp = left.as_ref().clone();
                 let right_exp = right.as_ref().clone();
                 let v1 = self.emit_expression(&left_exp, instructions);
                 let v2 = self.emit_expression(&right_exp, instructions);
 
-                let dst_name = self.make_temporary();
-                let dst = TackyVal::Var(dst_name);
+                let dst : TackyVal = if Self::is_compound(binop) {
+                    self.emit_expression(&left_exp, instructions)
+                } else {
+                    let dst_name = self.make_temporary();
+                    TackyVal::Var(dst_name)
+                };
+
                 let tacky_op = TackyEmit::convert_binop(binop);
                 let tacky_inst = TackyInstruction::Binary{binary_op: tacky_op, src1: v1, src2:  v2, dst: dst.clone()};
                 instructions.push(tacky_inst);
@@ -150,6 +156,11 @@ impl TackyEmit {
             AstBinaryOp::BitwiseXor => TackyBinaryOp::BitwiseXor,
             AstBinaryOp::LeftShift => TackyBinaryOp::LeftShift,
             AstBinaryOp::RightShift => TackyBinaryOp::RightShift,
+            AstBinaryOp::AddEquals => TackyBinaryOp::Add,
+            AstBinaryOp::SubEquals => TackyBinaryOp::Subtract,
+            AstBinaryOp::MulEquals => TackyBinaryOp::Multiply,
+            AstBinaryOp::DivEquals => TackyBinaryOp::Divide,
+            AstBinaryOp::ModEquals => TackyBinaryOp::Modulo,
         }
     }
 
@@ -395,6 +406,12 @@ impl TackyEmit {
             let copy = TackyInstruction::Copy {src, dst};
             instructions.push(copy);
         }
+    }
+
+    fn is_compound(binary_operator:  &AstBinaryOp) -> bool {
+        *binary_operator == AstBinaryOp::AddEquals || *binary_operator == AstBinaryOp::SubEquals ||
+        *binary_operator == AstBinaryOp::MulEquals || *binary_operator == AstBinaryOp::DivEquals ||
+        *binary_operator == AstBinaryOp::ModEquals
     }
 }
 

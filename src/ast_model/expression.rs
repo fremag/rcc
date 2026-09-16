@@ -23,7 +23,9 @@ pub enum AstExpression {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AstBinaryOp {Add, Sub, Mul, Div, Mod, And, Or, Equal, NotEqual, LessThan, LessThanEqual, GreaterThan, GreaterThanEqual,
-BitwiseAnd, BitwiseOr, BitwiseXor, LeftShift, RightShift}
+    BitwiseAnd, BitwiseOr, BitwiseXor, LeftShift, RightShift,
+    AddEquals, SubEquals, DivEquals, MulEquals, ModEquals,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AstUnaryOp {
