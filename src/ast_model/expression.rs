@@ -19,6 +19,18 @@ pub enum AstExpression {
         left: Box<AstExpression>, 
         right: Box<AstExpression> 
     },
+    PrefixIncrement {
+        factor: Box<AstExpression>,
+    },
+    PrefixDecrement {
+        factor: Box<AstExpression>,
+    },
+    PostfixIncrement {
+        factor: Box<AstExpression>,
+    },
+    PostfixDecrement {
+        factor: Box<AstExpression>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

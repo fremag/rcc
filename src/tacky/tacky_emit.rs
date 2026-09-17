@@ -125,6 +125,60 @@ impl TackyEmit {
                 instructions.push(copy);
                 var
             }
+            AstExpression::PrefixIncrement { factor } => {
+                let expression_result = self.emit_expression(factor, instructions);
+                let binary = TackyInstruction::Binary {
+                    binary_op: TackyBinaryOp::Add,
+                    src1: expression_result.clone(),
+                    src2: TackyVal::Constant(1),
+                    dst: expression_result.clone(),
+                };
+                instructions.push(binary);
+
+                expression_result
+            }
+            AstExpression::PrefixDecrement { factor } => {
+                let expression_result = self.emit_expression(factor, instructions);
+                let binary = TackyInstruction::Binary {
+                    binary_op: TackyBinaryOp::Subtract,
+                    src1: expression_result.clone(),
+                    src2: TackyVal::Constant(1),
+                    dst: expression_result.clone(),
+                };
+                instructions.push(binary);
+
+                expression_result
+            }
+            AstExpression::PostfixIncrement { factor } => {
+                let expression_result = self.emit_expression(factor, instructions);
+                let old_value_location = self.make_temporary();
+                let copy = TackyInstruction::Copy {src: expression_result.clone(), dst: TackyVal::Var(old_value_location.clone())};
+                instructions.push(copy);
+                let inc = TackyInstruction::Binary {
+                    binary_op: TackyBinaryOp::Add,
+                    src1: expression_result.clone(),
+                    src2: TackyVal::Constant(1),
+                    dst: expression_result.clone(),
+                };
+                instructions.push(inc);
+                TackyVal::Var(old_value_location)
+            }
+
+            AstExpression::PostfixDecrement { factor } => {
+                let expression_result = self.emit_expression(factor, instructions);
+                let old_value_location = self.make_temporary();
+                let copy = TackyInstruction::Copy {src: expression_result.clone(), dst: TackyVal::Var(old_value_location.clone())};
+                instructions.push(copy);
+                let dec = TackyInstruction::Binary {
+                    binary_op: TackyBinaryOp::Subtract,
+                    src1: expression_result.clone(),
+                    src2: TackyVal::Constant(1),
+                    dst: expression_result.clone(),
+                };
+                instructions.push(dec);
+                TackyVal::Var(old_value_location)
+            }
+
         }
     }
 
@@ -416,9 +470,9 @@ impl TackyEmit {
     fn is_compound(binary_operator:  &AstBinaryOp) -> bool {
         *binary_operator == AstBinaryOp::AddEquals || *binary_operator == AstBinaryOp::SubEquals ||
         *binary_operator == AstBinaryOp::MulEquals || *binary_operator == AstBinaryOp::DivEquals ||
-        *binary_operator == AstBinaryOp::ModEquals || 
+        *binary_operator == AstBinaryOp::ModEquals ||
         *binary_operator == AstBinaryOp::BitwiseAndEquals || *binary_operator == AstBinaryOp::BitwiseOrEquals ||
-        *binary_operator == AstBinaryOp::BitwiseXorEquals || 
+        *binary_operator == AstBinaryOp::BitwiseXorEquals ||
         *binary_operator == AstBinaryOp::LeftShiftEquals || *binary_operator == AstBinaryOp::RightShiftEquals
     }
 }
@@ -471,6 +525,7 @@ mod tests {
     use crate::ast_model::expression::AstUnaryOp::{BitwiseComplement, Negate};
     use crate::lexer::Lexer;
     use crate::parser::Parser;
+    use crate::utils::format_ast;
 
     #[test]
     pub fn test_emit_expression_constant() {
@@ -722,5 +777,49 @@ mod tests {
             .map(|tacky_inst| format!("{:?}", tacky_inst))
             .collect();
         tacky
+    }
+
+    #[test]
+    pub fn test_prefix_dec_tacky() {
+        let mut emit = TackyEmit::new();
+        let program = AstProgram {
+            function: AstFunction {
+                identifier: "main".to_string(),
+                body: vec![
+                    AstBlockItem::Declaration( AstDeclaration {
+                        identifier: "a".to_string(),
+                        init: Some(AstExpression::Constant {constant : AstConstant{ value: 1}})}),
+                    AstBlockItem::Declaration( AstDeclaration {
+                        identifier: "c".to_string(),
+                        init: Some(AstExpression::PrefixIncrement {factor : Box::from(AstExpression::Var { identifier: "a".to_string()})})})
+                ],
+            },
+        };
+
+        let result = emit.emit_program(&program);
+
+        let program_str = format_ast(format!("{result:?}"));
+        assert_eq!( r#"TackyProgram  {
+  function_def: TackyFunction  {
+    identifier: "main",
+    body: [
+      Copy  {
+        src: Constant(1),
+        dst: Var("a") 
+      },
+      Binary  {
+        binary_op: Add,
+        src1: Var("a"),
+        src2: Constant(1),
+        dst: Var("a") 
+      },
+      Copy  {
+        src: Var("a"),
+        dst: Var("c") 
+      },
+      Return(Constant(0))
+    ] 
+  } 
+}"#, program_str);
     }
 }

@@ -114,6 +114,38 @@ impl Resolver {
                 }
                 Ok(AstExpression::Assignment {left: Box::new(result_left.unwrap()), right: Box::new(result_right.unwrap())})
             }
+            AstExpression::PrefixIncrement { factor } => {
+                let result = Self::check_variable(factor, variable_map);
+                if let Ok(resolved_factor) = result {
+                    Ok(AstExpression::PrefixIncrement {factor: Box::new(resolved_factor)})
+                } else {
+                    result
+                }
+            },
+            AstExpression::PrefixDecrement { factor } => {
+                let result = Self::check_variable(factor, variable_map);
+                if let Ok(resolved_factor) = result {
+                    Ok(AstExpression::PrefixDecrement {factor: Box::new(resolved_factor)})
+                } else {
+                    result
+                }
+            },
+            AstExpression::PostfixIncrement { factor } => {
+                let result = Self::check_variable(factor, variable_map);
+                if let Ok(resolved_factor) = result {
+                    Ok(AstExpression::PostfixIncrement {factor: Box::new(resolved_factor)})
+                } else {
+                    result
+                }
+            },
+            AstExpression::PostfixDecrement { factor } => {
+                let result = Self::check_variable(factor, variable_map);
+                if let Ok(resolved_factor) = result {
+                    Ok(AstExpression::PostfixDecrement {factor: Box::new(resolved_factor)})
+                } else {
+                    result
+                }
+            },
         }
     }
 
@@ -134,6 +166,16 @@ impl Resolver {
                 }
             }
             AstStatement::Null => Ok(AstStatement::Null)
+        }
+    }
+
+    fn check_variable(ast_expression: &Box<AstExpression>, variable_map: &HashMap<String, String>) -> Result<AstExpression, String> {
+        match ast_expression.as_ref() {
+            AstExpression::Var { identifier } => match variable_map.contains_key(identifier) {
+                true => Ok(AstExpression::Var {identifier: variable_map.get(identifier).unwrap().clone()}),
+                false => Err(format!("Undeclared variable : {identifier}"))
+            }
+            _ => Err(format!("Invalid variable expression"))
         }
     }
 }

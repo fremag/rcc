@@ -7,9 +7,9 @@ by Nora Sandler](https://nostarch.com/writing-c-compiler)
 <summary>Chapter 5: local variables</summary>
 
 ```bash
-~/writing-a-c-compiler-tests$ ./test_compiler ../rcc/target/debug/rcc --chapter 5  --bitwise
+~/writing-a-c-compiler-tests$  ./test_compiler ../rcc/target/debug/rcc --chapter 5  --extra-credit
 ----------------------------------------------------------------------
-Ran 168 tests in 16.653s
+Ran 203 tests in 20.147s
 
 OK
 ```

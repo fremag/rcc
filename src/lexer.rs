@@ -87,6 +87,9 @@ impl Lexer {
     pub fn kw_bin_op_left_shift_equals_regex() -> regex::Regex { regex::Regex::new(r"^(?<item><<=)").unwrap() }
     pub fn kw_bin_op_right_shift_equals_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>>>=)").unwrap() }
 
+    pub fn kw_inc_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>\+\+)").unwrap() }
+    pub fn kw_dec_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>--)").unwrap() }
+
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
             return Err("Input is empty".to_string());
@@ -135,6 +138,9 @@ impl Lexer {
             Lexer::kw_bin_op_xor_equals_regex(),
             Lexer::kw_bin_op_left_shift_equals_regex(),
             Lexer::kw_bin_op_right_shift_equals_regex(),
+            
+            Lexer::kw_inc_regex(),
+            Lexer::kw_dec_regex(),
         ];
 
         let mut tokens = Vec::new();
@@ -651,6 +657,26 @@ mod tests {
     #[test_case(" equals", ">>=", ">>=")]
     fn right_shift_equals_regex(_name: &str, value: &str, expected: &str) {
         let re = Lexer::kw_bin_op_right_shift_equals_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("inc", "++", "++")]
+    fn inc_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_inc_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("dec", "--", "--")]
+    fn dec_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_dec_regex();
         let x = match re.captures(value) {
             None => "xxx",
             Some(caps) => caps.name("item").unwrap().as_str(),

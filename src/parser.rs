@@ -50,7 +50,7 @@ impl Parser {
         if tokens.len() == 0 {
             return Err("Empty token list".to_string())
         }
-        
+        let factor_result =
         if let Ok(constant) = self.parse_constant(tokens) {
             let f = AstExpression::Constant { constant };
             Ok(f)
@@ -81,13 +81,44 @@ impl Parser {
             } else {
                 Err("Invalid factor".to_string())
             }
+        } else if Self::check_token(tokens,"++")   {
+            tokens.remove(0);
+            if let Ok(inner_exp) = self.parse_factor(tokens) {
+                Ok(AstExpression::PrefixIncrement {
+                    factor: Box::new(inner_exp),
+                })
+            } else {
+                Err("Invalid prefix Increment operator".to_string())
+            }
+        } else if Self::check_token(tokens,"--")   {
+            tokens.remove(0);
+            if let Ok(inner_exp) = self.parse_factor(tokens) {
+                Ok(AstExpression::PrefixDecrement {
+                    factor: Box::new(inner_exp),
+                })
+            } else {
+                Err("Invalid prefix Decrement operator".to_string())
+            }
         } else {
             let identifier = tokens.remove(0);
             if self.check_identifier(&identifier) {
-                return Ok(AstExpression::Var {identifier })
+                Ok(AstExpression::Var {identifier })
+            } else {
+                Err(format!("Invalid identifier: {identifier:?}"))
             }
+        };
 
-            Err(format!("Invalid identifier: {identifier:?}"))
+        match factor_result {
+            Ok(factor   ) if Self::check_token(tokens,"++")  => {
+                tokens.remove(0);
+                Ok(AstExpression::PostfixIncrement { factor: Box::new(factor) })
+            },
+            Ok(factor   ) if Self::check_token(tokens,"--")  => {
+                tokens.remove(0);
+                Ok(AstExpression::PostfixDecrement { factor: Box::new(factor) })
+            },
+            Ok(factor) => Ok(factor),
+            Err(msg) => Err(msg),
         }
     }
 
@@ -250,10 +281,15 @@ impl Parser {
     }
 
     fn check_token(tokens: &mut Vec<String>, token: &str) -> bool {
-        if tokens.len() == 0 {
+        Self::check_token_fwd(tokens, token, 0)
+    }
+
+    fn check_token_fwd(tokens: &mut Vec<String>, token: &str, offset : usize) -> bool {
+        let len = tokens.len();
+        if offset >= len {
             return false;
         }
-        tokens[0] == token
+        tokens[offset] == token
     }
 
     fn check_identifier(&self, token: &String) -> bool {
@@ -310,7 +346,7 @@ impl Parser {
 
     fn is_compound_op(token: &String) -> bool {
         token == "+=" || token == "-=" || token == "*=" || token == "/=" || token == "%=" ||
-        token == "&=" || token == "|=" || token == "^=" || token == "<<=" || token == ">>="            
+        token == "&=" || token == "|=" || token == "^=" || token == "<<=" || token == ">>="
     }
 
     fn precedence(token: &String) -> i32 {
@@ -739,4 +775,69 @@ mod tests {
         let result= parser.parse_expression(&mut tokens, 0);
         assert_eq!(result.is_ok(), false);
     }
+
+    #[test]
+    fn test_parse_factor_prefix_inc() {
+        let parser = Parser::new();
+        let mut tokens = vec!["++", "a"].iter().map(|s| s.to_string()).collect();
+        let result = parser.parse_factor(&mut tokens);
+
+        match result {
+            Ok(AstExpression::PrefixIncrement { factor  })
+            if let AstExpression::Var {identifier} = factor.as_ref().clone()  => {
+                assert_eq!(identifier, "a");
+            },
+            Err(msg) => panic!("{msg:?}"),
+            Ok(exp) => panic!("{exp:?}")
+        }
+    }
+
+    #[test]
+    fn test_parse_factor_prefix_dec() {
+        let parser = Parser::new();
+        let mut tokens = vec!["--", "a"].iter().map(|s| s.to_string()).collect();
+        let result = parser.parse_factor(&mut tokens);
+
+        match result {
+            Ok(AstExpression::PrefixDecrement { factor  })
+            if let AstExpression::Var {identifier} = factor.as_ref().clone()  => {
+                assert_eq!(identifier, "a");
+            },
+            Err(msg) => panic!("{msg:?}"),
+            Ok(exp) => panic!("{exp:?}")
+        }
+    }
+
+    #[test]
+    fn test_parse_factor_postfix_inc() {
+        let parser = Parser::new();
+        let mut tokens = vec!["a", "++"].iter().map(|s| s.to_string()).collect();
+        let result = parser.parse_factor(&mut tokens);
+
+        match result {
+            Ok(AstExpression::PostfixIncrement { factor  })
+            if let AstExpression::Var {identifier} = factor.as_ref().clone()  => {
+                assert_eq!(identifier, "a");
+            },
+            Err(msg) => panic!("{msg:?}"),
+            Ok(exp) => panic!("{exp:?}")
+        }
+    }
+
+    #[test]
+    fn test_parse_factor_postfix_dec() {
+        let parser = Parser::new();
+        let mut tokens = vec!["a", "--"].iter().map(|s| s.to_string()).collect();
+        let result = parser.parse_factor(&mut tokens);
+
+        match result {
+            Ok(AstExpression::PostfixDecrement { factor  })
+            if let AstExpression::Var {identifier} = factor.as_ref().clone()  => {
+                assert_eq!(identifier, "a");
+            },
+            Err(msg) => panic!("{msg:?}"),
+            Ok(exp) => panic!("{exp:?}")
+        }
+    }
+    
 }
