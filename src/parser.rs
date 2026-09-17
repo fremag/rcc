@@ -360,10 +360,12 @@ impl Parser {
                     return Err("Invalid expression: expected ;".to_string());
                 }
                 if let Ok(expression) = init_exp {
-                    block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: Some(expression)})
+                    block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: Some(expression) })
                 } else {
                     return Err("Invalid expression".to_string());
                 }
+            } else if !Self::check_token(tokens, ";") {
+                return Err("Invalid declaration: expected ;".to_string());    
             } else {
                 let _ = tokens.remove(0);
                 block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: None })
