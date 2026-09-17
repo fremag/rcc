@@ -289,21 +289,28 @@ impl Parser {
             "*=" => AstBinaryOp::MulEquals,
             "/=" => AstBinaryOp::DivEquals,
             "%=" => AstBinaryOp::ModEquals,
+            "&=" => AstBinaryOp::BitwiseAndEquals,
+            "|=" => AstBinaryOp::BitwiseOrEquals,
+            "^=" => AstBinaryOp::BitwiseXorEquals,
+            "<<=" => AstBinaryOp::LeftShiftEquals,
+            ">>=" => AstBinaryOp::RightShiftEquals,
             _ => panic!("Invalid binary operator ! {}", token.as_str())
         }
     }
 
     fn is_binary_op(token: &String) -> bool {
-        token == "+"  || token == "-" || token == "*" || token == "/" || token == "%" || 
+        token == "+"  || token == "-" || token == "*" || token == "/" || token == "%" ||
         token == "<"  || token == "<=" || token == ">" || token == ">=" ||
         token == "==" || token == "!=" || token == "&&" || token == "||" ||
         token == "&"  || token == "|" || token == "^" || token == "<<" || token == ">>" ||
-        token == "="  || 
-        token == "+=" || token == "-=" || token == "*=" || token == "/=" || token == "%="
+        token == "="  ||
+        token == "+=" || token == "-=" || token == "*=" || token == "/=" || token == "%=" ||
+        token == "&=" || token == "|=" || token == "^=" || token == "<<=" || token == ">>="
     }
 
     fn is_compound_op(token: &String) -> bool {
-        token == "+=" || token == "-=" || token == "*=" || token == "/=" || token == "%="
+        token == "+=" || token == "-=" || token == "*=" || token == "/=" || token == "%=" ||
+        token == "&=" || token == "|=" || token == "^=" || token == "<<=" || token == ">>="            
     }
 
     fn precedence(token: &String) -> i32 {
@@ -318,7 +325,7 @@ impl Parser {
             "|" => 15,
             "&&" => 10,
             "||" => 5,
-            "=" | "+=" | "-=" | "*=" | "/=" | "%="=> 1,
+            "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" => 1,
             _ => panic!("Unknown precedence ! ({token})")
         }
     }
@@ -365,7 +372,7 @@ impl Parser {
                     return Err("Invalid expression".to_string());
                 }
             } else if !Self::check_token(tokens, ";") {
-                return Err("Invalid declaration: expected ;".to_string());    
+                return Err("Invalid declaration: expected ;".to_string());
             } else {
                 let _ = tokens.remove(0);
                 block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: None })

@@ -161,6 +161,11 @@ impl TackyEmit {
             AstBinaryOp::MulEquals => TackyBinaryOp::Multiply,
             AstBinaryOp::DivEquals => TackyBinaryOp::Divide,
             AstBinaryOp::ModEquals => TackyBinaryOp::Modulo,
+            AstBinaryOp::BitwiseAndEquals => TackyBinaryOp::BitwiseAnd,
+            AstBinaryOp::BitwiseOrEquals => TackyBinaryOp::BitwiseOr,
+            AstBinaryOp::BitwiseXorEquals => TackyBinaryOp::BitwiseXor,
+            AstBinaryOp::LeftShiftEquals => TackyBinaryOp::LeftShift,
+            AstBinaryOp::RightShiftEquals => TackyBinaryOp::RightShift
         }
     }
 
@@ -411,7 +416,10 @@ impl TackyEmit {
     fn is_compound(binary_operator:  &AstBinaryOp) -> bool {
         *binary_operator == AstBinaryOp::AddEquals || *binary_operator == AstBinaryOp::SubEquals ||
         *binary_operator == AstBinaryOp::MulEquals || *binary_operator == AstBinaryOp::DivEquals ||
-        *binary_operator == AstBinaryOp::ModEquals
+        *binary_operator == AstBinaryOp::ModEquals || 
+        *binary_operator == AstBinaryOp::BitwiseAndEquals || *binary_operator == AstBinaryOp::BitwiseOrEquals ||
+        *binary_operator == AstBinaryOp::BitwiseXorEquals || 
+        *binary_operator == AstBinaryOp::LeftShiftEquals || *binary_operator == AstBinaryOp::RightShiftEquals
     }
 }
 
