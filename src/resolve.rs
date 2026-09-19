@@ -146,8 +146,24 @@ impl Resolver {
                     result
                 }
             },
-            AstExpression::Conditional { condition, then_expression: then_statement, else_expression: else_statement } => {
-                todo!()
+            AstExpression::Conditional { condition, then_expression, else_expression } => {
+                let result_condition = self.resolve_expression(condition.as_ref(), variable_map);
+                let result_then = self.resolve_expression(then_expression.as_ref(), variable_map);
+                let result_else = self.resolve_expression(else_expression.as_ref(), variable_map);
+                if let Ok(resolved_condition) = &result_condition
+                    && let Ok(resolved_then) = &result_then
+                    && let Ok(resolved_else) = &result_else
+                {
+                    Ok(AstExpression::Conditional {condition: Box::new(resolved_condition.clone()), then_expression: Box::new(resolved_then.clone()), else_expression: Box::new(resolved_else.clone())})
+                } else if let Err(msg) = result_condition {
+                    Err(msg)
+                } else if let Err(msg) = result_then {
+                    Err(msg)
+                } else if let Err(msg) = result_else {
+                    Err(msg)
+                } else {
+                    unreachable!()
+                }
             }
         }
     }
@@ -169,8 +185,29 @@ impl Resolver {
                 }
             }
             AstStatement::Null => Ok(AstStatement::Null),
-            AstStatement::If { .. } => {
-                todo!()
+            AstStatement::If { expression, then_statement, else_statement } => {
+                let result_expression = self.resolve_expression(&expression, variable_map);
+                if let Err(msg) = &result_expression {
+                    return Err(msg.to_string())
+                }
+
+                let result_then = self.resolve_statement(&then_statement, variable_map);
+                if let Err(msg) = &result_then {
+                    return Err(msg.to_string())
+                }
+
+                let result_else = match else_statement {
+                    Some(else_statement) => {
+                        let else_result = self.resolve_statement(&else_statement.as_ref(), variable_map);
+                        match else_result {
+                            Ok(else_exp) => Some (Box::new(else_exp)),
+                            Err(msg) => return Err(msg.to_string())
+                        }
+                    },
+                    None => None
+                };
+
+                Ok(AstStatement::If {expression: result_expression.unwrap(), then_statement: Box::new(result_then.unwrap()), else_statement: result_else})
             }
         }
     }
