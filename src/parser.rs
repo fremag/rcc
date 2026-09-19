@@ -391,7 +391,7 @@ impl Parser {
         if Self::check_token(tokens, "int") {
             let _ = tokens.remove(0);
             let identifier = tokens.remove(0);
-            if ! self.check_identifier(&identifier) {
+            if !self.check_identifier(&identifier) {
                 return Err(format!("Invalid identifier: {identifier}"));
             }
             if Self::check_token(tokens, "=") {
@@ -412,6 +412,39 @@ impl Parser {
             } else {
                 let _ = tokens.remove(0);
                 block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: None })
+            }
+        } else if Self::check_token(tokens, "if") {
+            let _ = tokens.remove(0);
+
+            if ! Self::check_token(tokens, "(") {
+                return Err("Invalid expression: expected (".to_string());
+            }
+            let _ = tokens.remove(0);
+
+            let cond_exp = self.parse_expression(tokens, 0);
+
+            if ! Self::check_token(tokens, ")") {
+                return Err("Invalid expression: expected )".to_string());
+            }
+            let _ = tokens.remove(0);
+
+            let then_statement = self.parse_statement(tokens);
+            if let Err(msg) = then_statement {
+                return Err(format!("Invalid 'then' statement {msg}").to_string());
+            }
+
+            if Self::check_token(tokens, ";") {
+                let _ = tokens.remove(0);
+                block_item = AstBlockItem::Statement(AstStatement::If {expression: cond_exp.unwrap(), then_statement: Box::new(then_statement.unwrap()), else_statement: None})
+            } else if Self::check_token(tokens, "else") {
+                let _ = tokens.remove(0);
+                let else_statement = self.parse_statement(tokens);
+                if let Err(msg) = else_statement {
+                    return Err(format!("Invalid 'else' statement {msg}").to_string());
+                }
+                block_item = AstBlockItem::Statement(AstStatement::If {expression: cond_exp.unwrap(), then_statement: Box::new(then_statement.unwrap()), else_statement: Some(Box::new(else_statement.unwrap()))})
+            } else {
+                return Err("Invalid expression: expected ;".to_string());
             }
         } else {
             let statement = self.parse_statement(tokens);

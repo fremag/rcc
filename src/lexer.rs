@@ -90,6 +90,11 @@ impl Lexer {
     pub fn kw_inc_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>\+\+)").unwrap() }
     pub fn kw_dec_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>--)").unwrap() }
 
+    pub fn kw_if_regex()       -> regex::Regex { regex::Regex::new(r"^(?<item>if)").unwrap() }
+    pub fn kw_else_regex()     -> regex::Regex { regex::Regex::new(r"^(?<item>else)").unwrap() }
+    pub fn kw_question_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>\?)").unwrap() }
+    pub fn kw_colon_regex()    -> regex::Regex { regex::Regex::new(r"^(?<item>:)").unwrap() }
+
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
             return Err("Input is empty".to_string());
@@ -141,6 +146,10 @@ impl Lexer {
             
             Lexer::kw_inc_regex(),
             Lexer::kw_dec_regex(),
+            Lexer::kw_if_regex(),
+            Lexer::kw_else_regex(),
+            Lexer::kw_question_regex(),
+            Lexer::kw_colon_regex(),
         ];
 
         let mut tokens = Vec::new();
