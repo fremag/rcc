@@ -179,6 +179,9 @@ impl TackyEmit {
                 TackyVal::Var(old_value_location)
             }
 
+            AstExpression::Conditional { .. } => { 
+                todo!()
+            }
         }
     }
 
@@ -284,6 +287,9 @@ impl TackyEmit {
                 let _ = self.emit_expression(expression, instructions); // we don't use expression's result value
             }
             AstStatement::Null => { } // Nothing to do
+            AstStatement::If { expression, then_statement, else_statement } => {
+                self.emit_condition(expression, then_statement, else_statement, instructions);
+            }
         }
     }
 
@@ -474,6 +480,10 @@ impl TackyEmit {
         *binary_operator == AstBinaryOp::BitwiseAndEquals || *binary_operator == AstBinaryOp::BitwiseOrEquals ||
         *binary_operator == AstBinaryOp::BitwiseXorEquals ||
         *binary_operator == AstBinaryOp::LeftShiftEquals || *binary_operator == AstBinaryOp::RightShiftEquals
+    }
+
+    fn emit_condition(&self, exp_condition: &AstExpression, then_statement: &Box<AstStatement>, else_statement: &Option<Box<AstStatement>>, instructions: &mut Vec<TackyInstruction>) {
+        todo!()
     }
 }
 

@@ -146,6 +146,9 @@ impl Resolver {
                     result
                 }
             },
+            AstExpression::Conditional { condition, then_expression: then_statement, else_expression: else_statement } => {
+                todo!()
+            }
         }
     }
 
@@ -165,7 +168,10 @@ impl Resolver {
                     Err(msg) => Err(msg)
                 }
             }
-            AstStatement::Null => Ok(AstStatement::Null)
+            AstStatement::Null => Ok(AstStatement::Null),
+            AstStatement::If { .. } => {
+                todo!()
+            }
         }
     }
 

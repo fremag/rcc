@@ -31,6 +31,11 @@ pub enum AstExpression {
     PostfixDecrement {
         factor: Box<AstExpression>,
     },
+    Conditional {
+        condition: Box<AstExpression>,
+        then_expression: Box<AstExpression>,
+        else_expression: Box<AstExpression>
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

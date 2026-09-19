@@ -141,6 +141,17 @@ impl Parser {
                     } else {
                         return Err("Invalid expression".to_string());
                     }
+                }  else if next_token == "?" {
+                    let _ = tokens.remove(0);
+                    let then_result = self.parse_conditional_middle(tokens);
+                    let next_token_precedence = Self::precedence(&next_token);
+                    let else_result = self.parse_expression(tokens, next_token_precedence);
+                    if let Ok(then_exp) = then_result && let Ok(else_exp) = else_result  {
+                        left = AstExpression::Conditional {condition: Box::new(left), then_expression: Box::new(then_exp), else_expression: Box::new(else_exp) };
+                    } else {
+                        return Err("Invalid conditional".to_string());
+                    }
+
                 } else if Self::is_compound_op(&next_token) {
                     let binop = self.parse_binop(tokens);
                     let next_token_precedence = Self::precedence(&next_token); // it's not like real binary op so precedence is not changing
@@ -216,6 +227,38 @@ impl Parser {
             else {
                 Err("Invalid return expression".to_string())
             }
+        } else if Self::check_token(tokens, "if") {
+            let _ = tokens.remove(0);
+
+            if ! Self::check_token(tokens, "(") {
+                return Err("Invalid expression: expected (".to_string());
+            }
+            let _ = tokens.remove(0);
+
+            let cond_exp = self.parse_expression(tokens, 0);
+
+            if ! Self::check_token(tokens, ")") {
+                return Err("Invalid expression: expected )".to_string());
+            }
+            let _ = tokens.remove(0);
+
+            let then_statement = self.parse_statement(tokens);
+            if let Err(msg) = then_statement {
+                return Err(format!("Invalid 'then' statement {msg}").to_string());
+            }
+
+            let else_statement : Option<Box<AstStatement>> = if Self::check_token(tokens, "else") {
+                let _ = tokens.remove(0);
+                let else_statement = self.parse_statement(tokens);
+                if let Err(msg) = else_statement {
+                    return Err(format!("Invalid 'else' statement {msg}").to_string());
+                }
+                Some(Box::new(else_statement.unwrap()))
+            }                 else {
+                None
+            };
+
+            Ok(AstStatement::If {expression: cond_exp.unwrap(), then_statement: Box::new(then_statement.unwrap()), else_statement })
         } else if Self::check_token(tokens, ";") {
             let _ = tokens.remove(0);
             Ok(AstStatement::Null)
@@ -341,7 +384,8 @@ impl Parser {
         token == "&"  || token == "|" || token == "^" || token == "<<" || token == ">>" ||
         token == "="  ||
         token == "+=" || token == "-=" || token == "*=" || token == "/=" || token == "%=" ||
-        token == "&=" || token == "|=" || token == "^=" || token == "<<=" || token == ">>="
+        token == "&=" || token == "|=" || token == "^=" || token == "<<=" || token == ">>=" ||
+        token == "?"
     }
 
     fn is_compound_op(token: &String) -> bool {
@@ -361,6 +405,7 @@ impl Parser {
             "|" => 15,
             "&&" => 10,
             "||" => 5,
+            "?" => 3,
             "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" => 1,
             _ => panic!("Unknown precedence ! ({token})")
         }
@@ -413,39 +458,6 @@ impl Parser {
                 let _ = tokens.remove(0);
                 block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: None })
             }
-        } else if Self::check_token(tokens, "if") {
-            let _ = tokens.remove(0);
-
-            if ! Self::check_token(tokens, "(") {
-                return Err("Invalid expression: expected (".to_string());
-            }
-            let _ = tokens.remove(0);
-
-            let cond_exp = self.parse_expression(tokens, 0);
-
-            if ! Self::check_token(tokens, ")") {
-                return Err("Invalid expression: expected )".to_string());
-            }
-            let _ = tokens.remove(0);
-
-            let then_statement = self.parse_statement(tokens);
-            if let Err(msg) = then_statement {
-                return Err(format!("Invalid 'then' statement {msg}").to_string());
-            }
-
-            if Self::check_token(tokens, ";") {
-                let _ = tokens.remove(0);
-                block_item = AstBlockItem::Statement(AstStatement::If {expression: cond_exp.unwrap(), then_statement: Box::new(then_statement.unwrap()), else_statement: None})
-            } else if Self::check_token(tokens, "else") {
-                let _ = tokens.remove(0);
-                let else_statement = self.parse_statement(tokens);
-                if let Err(msg) = else_statement {
-                    return Err(format!("Invalid 'else' statement {msg}").to_string());
-                }
-                block_item = AstBlockItem::Statement(AstStatement::If {expression: cond_exp.unwrap(), then_statement: Box::new(then_statement.unwrap()), else_statement: Some(Box::new(else_statement.unwrap()))})
-            } else {
-                return Err("Invalid expression: expected ;".to_string());
-            }
         } else {
             let statement = self.parse_statement(tokens);
             if let Ok(statement) = statement {
@@ -456,6 +468,20 @@ impl Parser {
         }
 
         Ok(block_item)
+    }
+
+    fn parse_conditional_middle(&self, tokens: &mut Vec<String>) -> Result<AstExpression, String> {
+       let exp_result = self.parse_expression(tokens, 0);
+       if let Ok(exp) = exp_result {
+           if Self::check_token(tokens, ":") {
+               let _ = tokens.remove(0);
+               Ok(exp)
+           } else {
+               Err("missing : token n conditional !".to_string())
+           }
+       } else {
+           Err("Invalid expression".to_string())
+       }
     }
 }
 
@@ -872,5 +898,75 @@ mod tests {
             Ok(exp) => panic!("{exp:?}")
         }
     }
-    
+
+    #[test]
+    fn test_parse_if_statement_no_else() {
+        let parser = Parser::new();
+        let mut tokens = vec!["if", "(", "1", "==", "0", ")", "return", "0", ";"].iter().map(|s| s.to_string()).collect();
+        let result = parser.parse_statement(&mut tokens);
+
+        if let Ok(AstStatement::If {expression, then_statement, else_statement}) = result
+            && let AstExpression::Binary {left, binop, right} = expression
+            && let AstStatement::Return {expression} = then_statement.as_ref()
+            && else_statement.is_none()
+            && let AstExpression::Constant {constant: cst1} = left.as_ref()
+            && let AstExpression::Constant {constant: cst2} = right.as_ref()
+            && binop == AstBinaryOp::Equal
+            && cst1.value == 1
+            && cst2.value == 0
+            && else_statement.is_none()
+        {
+            print!("Ok !")
+        } else {
+            panic!("Something failed !")
+        }
+    }
+
+    #[test]
+    fn test_parse_if_statement_with_else() {
+        let parser = Parser::new();
+        let mut tokens = vec!["if", "(", "1", "==", "0", ")", "return", "0", ";", "else", "return", "1", ";"].iter().map(|s| s.to_string()).collect();
+        let result = parser.parse_statement(&mut tokens);
+
+        if let Ok(AstStatement::If {expression, then_statement, else_statement}) = result
+            && let AstExpression::Binary {left, binop, right} = expression
+            && let AstStatement::Return {expression: then_return} = then_statement.as_ref()
+            && let AstStatement::Return {expression: else_return} = else_statement.unwrap().as_ref()
+            && let AstExpression::Constant {constant: cst1} = left.as_ref()
+            && let AstExpression::Constant {constant: cst2} = right.as_ref()
+            && binop == AstBinaryOp::Equal
+            && cst1.value == 1
+            && cst2.value == 0
+            && let AstExpression::Constant {constant: then_value } = then_return
+            && let AstExpression::Constant {constant: else_value } = else_return
+            && then_value.value == 0
+            && else_value.value == 1
+        {
+            print!("Ok !")
+        } else {
+            panic!("Something failed !")
+        }
+    }
+
+    #[test]
+    fn test_parse_conditional_expression() {
+        let parser = Parser::new();
+        let mut tokens = vec!["1", "==", "0", "?", "42", ":", "13"].iter().map(|s| s.to_string()).collect();
+        let result = parser.parse_expression(&mut tokens, 0);
+
+        if let Ok(AstExpression::Conditional {condition, then_expression: then_statement, else_expression: else_statement }) = result
+            && let AstExpression::Binary {left, binop, right} = condition.as_ref()
+            && let AstExpression::Constant {constant: then_constant} = then_statement.as_ref()
+            && let AstExpression::Constant {constant: else_constant} = else_statement.as_ref()
+            && let AstExpression::Constant {constant: cst1} = left.as_ref()
+            && let AstExpression::Constant {constant: cst2} = right.as_ref()
+            && binop == &AstBinaryOp::Equal
+            && cst1.value == 1
+            && cst2.value == 0
+        {
+            print!("Ok !")
+        } else {
+            panic!("Something failed !")
+        }
+    }
 }
