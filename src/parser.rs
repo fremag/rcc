@@ -902,7 +902,7 @@ mod tests {
     #[test]
     fn test_parse_if_statement_no_else() {
         let parser = Parser::new();
-        let mut tokens = vec!["if", "(", "1", "==", "0", ")", "return", "0", ";"].iter().map(|s| s.to_string()).collect();
+        let mut tokens = vec!["if", "(", "1", "==", "0", ")", "return", "42", ";"].iter().map(|s| s.to_string()).collect();
         let result = parser.parse_statement(&mut tokens);
 
         if let Ok(AstStatement::If {expression, then_statement, else_statement}) = result
@@ -915,6 +915,8 @@ mod tests {
             && cst1.value == 1
             && cst2.value == 0
             && else_statement.is_none()
+            && let AstExpression::Constant {constant: return_cst} = expression
+            && return_cst.value == 42
         {
             print!("Ok !")
         } else {
