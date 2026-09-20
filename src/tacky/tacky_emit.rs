@@ -882,15 +882,15 @@ mod tests {
     body: [
       JumpIfZero  {
         condition: Constant(42),
-        target: "label_end_0"
+        target: "label_end_0" 
       },
       Return(Constant(1)),
       Label  {
-        identifier: "label_end_0"
+        identifier: "label_end_0" 
       },
       Return(Constant(0))
-    ]
-  }
+    ] 
+  } 
 }"#, program_str);
 
     }
