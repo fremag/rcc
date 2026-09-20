@@ -193,7 +193,7 @@ impl TackyEmit {
                 let copy_then_result = TackyInstruction::Copy {src: result_value.clone(), dst: result_var.clone()};
                 instructions.push(copy_then_result);
 
-                let end_label_name = self.make_label_else();
+                let end_label_name = self.make_label_end();
                 let jump_end = TackyInstruction::Jump { target: end_label_name.clone() };
                 instructions.push(jump_end);
 
@@ -203,6 +203,9 @@ impl TackyEmit {
                 let result_value =self.emit_expression(else_expression.as_ref(), instructions);
                 let copy_else_result = TackyInstruction::Copy {src: result_value.clone(), dst: result_var.clone()};
                 instructions.push(copy_else_result);
+
+                let end_label = TackyInstruction::Label {identifier: end_label_name.clone()};
+                instructions.push(end_label);
 
                 result_var
             }
@@ -922,7 +925,6 @@ mod tests {
     ] 
   } 
 }"#, program_str);
-
     }
 
     #[test]
@@ -1003,7 +1005,7 @@ mod tests {
         dst: Var("tmp.0") 
       },
       Jump  {
-        target: "label_else_1" 
+        target: "label_end_1" 
       },
       Label  {
         identifier: "label_else_0" 
@@ -1011,6 +1013,9 @@ mod tests {
       Copy  {
         src: Constant(2),
         dst: Var("tmp.0") 
+      },
+      Label  {
+        identifier: "label_end_1" 
       },
       Return(Var("tmp.0")),
       Return(Constant(0))
