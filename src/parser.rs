@@ -965,6 +965,10 @@ mod tests {
             && binop == &AstBinaryOp::Equal
             && cst1.value == 1
             && cst2.value == 0
+            && let AstConstant {value: then_value} = then_constant
+            && let AstConstant {value: else_value} = else_constant
+            && *then_value == 42
+            && *else_value == 13
         {
             print!("Ok !")
         } else {

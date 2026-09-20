@@ -179,8 +179,32 @@ impl TackyEmit {
                 TackyVal::Var(old_value_location)
             }
 
-            AstExpression::Conditional { .. } => {
-                todo!()
+            AstExpression::Conditional { condition, then_expression, else_expression } => {
+                let result = self.make_temporary();
+                let result_var = TackyVal::Var(result);
+
+                let val_condition =self.emit_expression(condition, instructions);
+                let else_label_name = self.make_label_else();
+
+                let jump_if_zero_else = TackyInstruction::JumpIfZero { condition: val_condition, target: else_label_name.clone() };
+                instructions.push(jump_if_zero_else);
+
+                let result_value =self.emit_expression(then_expression.as_ref(), instructions);
+                let copy_then_result = TackyInstruction::Copy {src: result_value.clone(), dst: result_var.clone()};
+                instructions.push(copy_then_result);
+
+                let end_label_name = self.make_label_else();
+                let jump_end = TackyInstruction::Jump { target: end_label_name.clone() };
+                instructions.push(jump_end);
+
+                let else_label = TackyInstruction::Label {identifier: else_label_name.clone()};
+                instructions.push(else_label);
+
+                let result_value =self.emit_expression(else_expression.as_ref(), instructions);
+                let copy_else_result = TackyInstruction::Copy {src: result_value.clone(), dst: result_var.clone()};
+                instructions.push(copy_else_result);
+
+                result_var
             }
         }
     }
@@ -268,6 +292,12 @@ impl TackyEmit {
 
     fn make_label_end(&mut self) -> String {
         let tmp = String::from("label_end_") + &self.tmp_label_end_count.to_string();
+        self.tmp_label_end_count += 1;
+        tmp
+    }
+
+    fn make_label_else(&mut self) -> String {
+        let tmp = String::from("label_else_") + &self.tmp_label_end_count.to_string();
         self.tmp_label_end_count += 1;
         tmp
     }
@@ -487,7 +517,7 @@ impl TackyEmit {
         let condition = self.emit_expression(exp_condition, instructions);
         if let Some(else_statement) = else_statement
         {
-            let else_label_name = self.make_label_end();
+            let else_label_name = self.make_label_else();
             let jump_if_zero_else = TackyInstruction::JumpIfZero { condition, target: else_label_name.clone() };
             instructions.push(jump_if_zero_else);
 
@@ -920,7 +950,7 @@ mod tests {
     body: [
       JumpIfZero  {
         condition: Constant(42),
-        target: "label_end_1" 
+        target: "label_else_1" 
       },
       Return(Constant(1)),
       Jump  {
@@ -933,6 +963,56 @@ mod tests {
       Label  {
         identifier: "label_end_0" 
       },
+      Return(Constant(0))
+    ] 
+  } 
+}"#, program_str);
+
+    }
+    #[test]
+    pub fn test_emit_conditional() {
+        let mut emit = TackyEmit::new();
+        let block_item = AstBlockItem::Statement(AstStatement::Return {
+            expression: AstExpression::Conditional {
+                condition: Box::new(AstExpression::Constant {constant: AstConstant {value: 42}}),
+                then_expression: Box::new(AstExpression::Constant {constant: AstConstant{value: 1}}),
+                else_expression: Box::new(AstExpression::Constant {constant: AstConstant{value: 2}})
+            }
+        });
+
+        let program = AstProgram {
+            function: AstFunction {
+                identifier: "main".to_string(),
+                body: vec![ block_item ],
+            },
+        };
+
+        let result = emit.emit_program(&program);
+
+        let program_str = format_ast(format!("{result:?}"));
+        assert_eq!( r#"TackyProgram  {
+  function_def: TackyFunction  {
+    identifier: "main",
+    body: [
+      JumpIfZero  {
+        condition: Constant(42),
+        target: "label_else_0" 
+      },
+      Copy  {
+        src: Constant(1),
+        dst: Var("tmp.0") 
+      },
+      Jump  {
+        target: "label_else_1" 
+      },
+      Label  {
+        identifier: "label_else_0" 
+      },
+      Copy  {
+        src: Constant(2),
+        dst: Var("tmp.0") 
+      },
+      Return(Var("tmp.0")),
       Return(Constant(0))
     ] 
   } 
