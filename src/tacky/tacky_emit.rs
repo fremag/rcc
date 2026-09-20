@@ -179,7 +179,7 @@ impl TackyEmit {
                 TackyVal::Var(old_value_location)
             }
 
-            AstExpression::Conditional { .. } => { 
+            AstExpression::Conditional { .. } => {
                 todo!()
             }
         }
@@ -288,7 +288,7 @@ impl TackyEmit {
             }
             AstStatement::Null => { } // Nothing to do
             AstStatement::If { expression, then_statement, else_statement } => {
-                self.emit_condition(expression, then_statement, else_statement, instructions);
+                self.emit_if(expression, then_statement, else_statement, instructions);
             }
         }
     }
@@ -482,8 +482,32 @@ impl TackyEmit {
         *binary_operator == AstBinaryOp::LeftShiftEquals || *binary_operator == AstBinaryOp::RightShiftEquals
     }
 
-    fn emit_condition(&self, exp_condition: &AstExpression, then_statement: &Box<AstStatement>, else_statement: &Option<Box<AstStatement>>, instructions: &mut Vec<TackyInstruction>) {
-        todo!()
+    fn emit_if(&mut self, exp_condition: &AstExpression, then_statement: &Box<AstStatement>, else_statement: &Option<Box<AstStatement>>, instructions: &mut Vec<TackyInstruction>) {
+        let end_label_name = self.make_label_end();
+        let condition = self.emit_expression(exp_condition, instructions);
+        if let Some(else_statement) = else_statement
+        {
+            let else_label_name = self.make_label_end();
+            let jump_if_zero_else = TackyInstruction::JumpIfZero { condition, target: else_label_name.clone() };
+            instructions.push(jump_if_zero_else);
+
+            self.emit_statement(then_statement, instructions);
+            let jump_end = TackyInstruction::Jump { target: end_label_name.clone() };
+            instructions.push(jump_end);
+
+            let else_label = TackyInstruction::Label {identifier: end_label_name.clone()};
+            instructions.push(else_label);
+
+            self.emit_statement(else_statement, instructions);
+        } else {
+            let jump_if_zero_v1 = TackyInstruction::JumpIfZero { condition, target: end_label_name.clone() };
+            instructions.push(jump_if_zero_v1);
+            self.emit_statement(then_statement, instructions);
+        }
+
+        let end_label = TackyInstruction::Label {identifier: end_label_name.clone()};
+        instructions.push(end_label);
+
     }
 }
 
@@ -831,5 +855,88 @@ mod tests {
     ] 
   } 
 }"#, program_str);
+    }
+
+    #[test]
+    pub fn test_emit_if_no_else() {
+        let mut emit = TackyEmit::new();
+        let program = AstProgram {
+            function: AstFunction {
+                identifier: "main".to_string(),
+                body: vec![
+                    AstBlockItem::Statement( AstStatement::If{
+                        expression: AstExpression::Constant {constant: AstConstant {value: 42}},
+                        then_statement: Box::new(AstStatement::Return {expression: AstExpression::Constant {constant: AstConstant{value: 1}}}),
+                        else_statement: None
+                    })
+                ],
+            },
+        };
+
+        let result = emit.emit_program(&program);
+
+        let program_str = format_ast(format!("{result:?}"));
+        assert_eq!( r#"TackyProgram  {
+  function_def: TackyFunction  {
+    identifier: "main",
+    body: [
+      JumpIfZero  {
+        condition: Constant(42),
+        target: "label_end_0"
+      },
+      Return(Constant(1)),
+      Label  {
+        identifier: "label_end_0"
+      },
+      Return(Constant(0))
+    ]
+  }
+}"#, program_str);
+
+    }
+
+    #[test]
+    pub fn test_emit_if_else() {
+        let mut emit = TackyEmit::new();
+        let program = AstProgram {
+            function: AstFunction {
+                identifier: "main".to_string(),
+                body: vec![
+                    AstBlockItem::Statement( AstStatement::If{
+                        expression: AstExpression::Constant {constant: AstConstant {value: 42}},
+                        then_statement: Box::new(AstStatement::Return {expression: AstExpression::Constant {constant: AstConstant{value: 1}}}),
+                        else_statement: Some(Box::new(AstStatement::Return {expression: AstExpression::Constant {constant: AstConstant{value: 2}}})),
+                    })
+                ],
+            },
+        };
+
+        let result = emit.emit_program(&program);
+
+        let program_str = format_ast(format!("{result:?}"));
+        assert_eq!( r#"TackyProgram  {
+  function_def: TackyFunction  {
+    identifier: "main",
+    body: [
+      JumpIfZero  {
+        condition: Constant(42),
+        target: "label_end_1" 
+      },
+      Return(Constant(1)),
+      Jump  {
+        target: "label_end_0" 
+      },
+      Label  {
+        identifier: "label_end_0" 
+      },
+      Return(Constant(2)),
+      Label  {
+        identifier: "label_end_0" 
+      },
+      Return(Constant(0))
+    ] 
+  } 
+}"#, program_str);
+
     }
 }
