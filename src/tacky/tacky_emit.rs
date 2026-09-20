@@ -528,7 +528,7 @@ impl TackyEmit {
             let jump_end = TackyInstruction::Jump { target: end_label_name.clone() };
             instructions.push(jump_end);
 
-            let else_label = TackyInstruction::Label {identifier: end_label_name.clone()};
+            let else_label = TackyInstruction::Label {identifier: else_label_name.clone()};
             instructions.push(else_label);
 
             self.emit_statement(else_statement, instructions);
@@ -872,21 +872,21 @@ mod tests {
     body: [
       Copy  {
         src: Constant(1),
-        dst: Var("a") 
+        dst: Var("a")
       },
       Binary  {
         binary_op: Add,
         src1: Var("a"),
         src2: Constant(1),
-        dst: Var("a") 
+        dst: Var("a")
       },
       Copy  {
         src: Var("a"),
-        dst: Var("c") 
+        dst: Var("c")
       },
       Return(Constant(0))
-    ] 
-  } 
+    ]
+  }
 }"#, program_str);
     }
 
@@ -915,15 +915,15 @@ mod tests {
     body: [
       JumpIfZero  {
         condition: Constant(42),
-        target: "label_end_0" 
+        target: "label_end_0"
       },
       Return(Constant(1)),
       Label  {
-        identifier: "label_end_0" 
+        identifier: "label_end_0"
       },
       Return(Constant(0))
-    ] 
-  } 
+    ]
+  }
 }"#, program_str);
     }
 
@@ -945,29 +945,30 @@ mod tests {
 
         let result = emit.emit_program(&program);
 
-        let program_str = format_ast(format!("{result:?}"));
+        let string = format!("{result:?}");
+        let program_str = format_ast(string);
         assert_eq!( r#"TackyProgram  {
   function_def: TackyFunction  {
     identifier: "main",
     body: [
       JumpIfZero  {
         condition: Constant(42),
-        target: "label_else_1" 
+        target: "label_else_1"
       },
       Return(Constant(1)),
       Jump  {
-        target: "label_end_0" 
+        target: "label_end_0"
       },
       Label  {
-        identifier: "label_end_0" 
+        identifier: "label_else_1"
       },
       Return(Constant(2)),
       Label  {
-        identifier: "label_end_0" 
+        identifier: "label_end_0"
       },
       Return(Constant(0))
-    ] 
-  } 
+    ]
+  }
 }"#, program_str);
 
     }
@@ -998,29 +999,29 @@ mod tests {
     body: [
       JumpIfZero  {
         condition: Constant(42),
-        target: "label_else_0" 
+        target: "label_else_0"
       },
       Copy  {
         src: Constant(1),
-        dst: Var("tmp.0") 
+        dst: Var("tmp.0")
       },
       Jump  {
-        target: "label_end_1" 
+        target: "label_end_1"
       },
       Label  {
-        identifier: "label_else_0" 
+        identifier: "label_else_0"
       },
       Copy  {
         src: Constant(2),
-        dst: Var("tmp.0") 
+        dst: Var("tmp.0")
       },
       Label  {
-        identifier: "label_end_1" 
+        identifier: "label_end_1"
       },
       Return(Var("tmp.0")),
       Return(Constant(0))
-    ] 
-  } 
+    ]
+  }
 }"#, program_str);
 
     }

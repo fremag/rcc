@@ -4,6 +4,96 @@ Build a Real Programming Language from Scratch
 by Nora Sandler](https://nostarch.com/writing-c-compiler)
 
 <details open>
+<summary>Chapter 6: if statement and conditional expressions</summary>
+
+```bash
+:~/writing-a-c-compiler-tests$  ./test_compiler ../rcc/target/debug/rcc --chapter 6 
+----------------------------------------------------------------------
+Ran 183 tests in 17.553s
+
+OK
+```
+
+```c
+int main(void) {
+    int a = 0;
+    a = 1 ? 2 : 3;
+    return a;
+}
+```
+
+```
+TackyProgram  {
+  function_def: TackyFunction  {
+    identifier: "main",
+    body: [
+      Copy  {
+        src: Constant(0),
+        dst: Var("a-0")
+      },
+      JumpIfZero  {
+        condition: Constant(1),
+        target: "label_else_0"
+      },
+      Copy  {
+        src: Constant(2),
+        dst: Var("tmp.0")
+      },
+      Jump  {
+        target: "label_end_1"
+      },
+      Label  {
+        identifier: "label_else_0"
+      },
+      Copy  {
+        src: Constant(3),
+        dst: Var("tmp.0")
+      },
+      Label  {
+        identifier: "label_end_1"
+      },
+      Copy  {
+        src: Var("tmp.0"),
+        dst: Var("a-0")
+      },
+      Return(Var("a-0")),
+      Return(Constant(0))
+    ]
+  }
+}
+```
+
+```asm
+       .globl main
+main:
+        pushq %rbp
+        movq %rsp, %rbp
+        subq $8, %rsp
+        movl $0, -4(%rbp)
+        movl $1, %r11d
+        cmpl $0, %r11d 
+        jE .L_label_else_0
+        movl $2, -8(%rbp)
+        jmp  .L_label_end_1
+        .L_label_else_0:
+        movl $3, -8(%rbp)
+        .L_label_end_1:
+        movl -8(%rbp), %r10d
+        movl %r10d, -4(%rbp)
+        movl -4(%rbp), %eax
+        movq %rbp, %rsp
+        popq %rbp
+        ret
+        movl $0, %eax
+        movq %rbp, %rsp
+        popq %rbp
+        ret
+        .section .note.GNU-stack,"",@progbits
+```
+</details>
+
+
+<details>
 <summary>Chapter 5: local variables</summary>
 
 ```bash
