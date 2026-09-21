@@ -11,6 +11,10 @@ impl Lexer {
         regex::Regex::new(r"^(?<item>[a-zA-Z_]\w*)\b").unwrap()
     }
 
+    pub fn label_regex() -> regex::Regex {
+        regex::Regex::new(r"^(?<item>[a-zA-Z_]\w*):\b").unwrap()
+    }
+
     pub fn constant_regex() -> regex::Regex {
         regex::Regex::new(r"^(?<item>[0-9]+)\b").unwrap()
     }
@@ -94,6 +98,8 @@ impl Lexer {
     pub fn kw_else_regex()     -> regex::Regex { regex::Regex::new(r"^(?<item>else)").unwrap() }
     pub fn kw_question_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>\?)").unwrap() }
     pub fn kw_colon_regex()    -> regex::Regex { regex::Regex::new(r"^(?<item>:)").unwrap() }
+    pub fn kw_goto_regex()     -> regex::Regex { regex::Regex::new(r"^(?<item>goto)").unwrap() }
+
 
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
@@ -150,6 +156,7 @@ impl Lexer {
             Lexer::kw_else_regex(),
             Lexer::kw_question_regex(),
             Lexer::kw_colon_regex(),
+            Lexer::kw_goto_regex(),
         ];
 
         let mut tokens = Vec::new();
@@ -685,6 +692,17 @@ mod tests {
 
     #[test_case("dec", "--", "--")]
     fn dec_regex(_name: &str, value: &str, expected: &str) {
+        let re = Lexer::kw_dec_regex();
+        let x = match re.captures(value) {
+            None => "xxx",
+            Some(caps) => caps.name("item").unwrap().as_str(),
+        };
+        assert_eq!(x, expected);
+    }
+
+    #[test_case("label 1", "lbl_1:", "lbl_1")]
+    #[test_case("not label", "lbl_1", "xxx")]
+    fn label_regex(_name: &str, value: &str, expected: &str) {
         let re = Lexer::kw_dec_regex();
         let x = match re.captures(value) {
             None => "xxx",
