@@ -12,7 +12,7 @@ impl Lexer {
     }
 
     pub fn label_regex() -> regex::Regex {
-        regex::Regex::new(r"^(?<item>[a-zA-Z_]\w*):\b").unwrap()
+        regex:: Regex::new(r"^(?<item>[a-zA-Z_]\w*):").unwrap()
     }
 
     pub fn constant_regex() -> regex::Regex {
@@ -701,9 +701,9 @@ mod tests {
     }
 
     #[test_case("label 1", "lbl_1:", "lbl_1")]
-    #[test_case("not label", "lbl_1", "xxx")]
+    #[test_case("not a label", "lbl_1", "xxx")]
     fn label_regex(_name: &str, value: &str, expected: &str) {
-        let re = Lexer::kw_dec_regex();
+        let re = Lexer::label_regex();
         let x = match re.captures(value) {
             None => "xxx",
             Some(caps) => caps.name("item").unwrap().as_str(),
