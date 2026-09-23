@@ -231,14 +231,14 @@ impl Parser {
             let _ = tokens.remove(0);
 
             if ! Self::check_token(tokens, "(") {
-                return Err("Invalid expression: expected (".to_string());
+                return Err("Invalid 'if' statement: expected (".to_string());
             }
             let _ = tokens.remove(0);
 
             let cond_exp = self.parse_expression(tokens, 0);
 
             if ! Self::check_token(tokens, ")") {
-                return Err("Invalid expression: expected )".to_string());
+                return Err("Invalid 'if' statement: expected )".to_string());
             }
             let _ = tokens.remove(0);
 
