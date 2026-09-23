@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::asm_constructs::function::FunctionDefinition;
 use crate::asm_constructs::instruction::{BinaryOperator, CondCode, Instruction, StackFrame, UnaryOperator};
 use crate::asm_constructs::operand::{Operand, Reg};
@@ -356,6 +357,9 @@ impl TackyEmit {
 
         instructions.push(TackyInstruction::Return(TackyVal::Constant(0)));
 
+        if ! self.check_labels(&instructions) {
+            panic!("Problem with labels !")
+        }
         TackyFunction {
             identifier: function.identifier.clone(),
             body: instructions,
@@ -549,7 +553,33 @@ impl TackyEmit {
 
         let end_label = TackyInstruction::Label {identifier: end_label_name.clone()};
         instructions.push(end_label);
+    }
 
+    fn check_labels(&self, instructions: &Vec<TackyInstruction>) -> bool {
+        let mut label_map = HashSet::<String>::new();
+        let mut goto_map = HashSet::<String>::new();
+        for instruction in instructions.iter() {
+            match instruction {
+                TackyInstruction::Label{identifier} => {
+                    if label_map.contains(identifier) {
+                        return false
+                    }
+                    label_map.insert(identifier.clone());
+                }
+
+                TackyInstruction::Jump { target } => {
+                    goto_map.insert(target.clone());
+                }
+                _ => {} // do nothing
+            }
+        }
+        for label in goto_map.iter() {
+            if ! label_map.contains(label) {
+                return false;
+            }
+        }
+
+        true
     }
 }
 

@@ -7,9 +7,9 @@ by Nora Sandler](https://nostarch.com/writing-c-compiler)
 <summary>Chapter 6: if statement and conditional expressions</summary>
 
 ```bash
-:~/writing-a-c-compiler-tests$  ./test_compiler ../rcc/target/debug/rcc --chapter 6 
+~/writing-a-c-compiler-tests$  ./test_compiler ../rcc/target/debug/rcc --chapter 6 --extra-credit
 ----------------------------------------------------------------------
-Ran 183 tests in 17.553s
+Ran 271 tests in 28.798s
 
 OK
 ```
