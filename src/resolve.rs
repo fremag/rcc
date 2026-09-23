@@ -209,8 +209,18 @@ impl Resolver {
 
                 Ok(AstStatement::If {expression: result_expression.unwrap(), then_statement: Box::new(result_then.unwrap()), else_statement: result_else})
             }
-            AstStatement::Label { label: _, statement: _ } => todo!(),
-            AstStatement::Goto { target: _ } => todo!()
+            AstStatement::Label { label, statement } => {
+                let resolved_statement_result = self.resolve_statement(statement.as_ref(), variable_map);
+                match resolved_statement_result {
+                    Ok(resolved_statement) => {
+                        Ok(AstStatement::Label { label: label.clone(), statement: Box::new(resolved_statement) })
+                    }
+                    Err(msg) => {
+                        Err(format!("Invalid label, failed to resolve statement! {msg} "))
+                    }
+                }
+            },
+            AstStatement::Goto { target } => Ok(AstStatement::Goto { target: target.clone() }),
         }
     }
 

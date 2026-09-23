@@ -323,8 +323,15 @@ impl TackyEmit {
             AstStatement::If { expression, then_statement, else_statement } => {
                 self.emit_if(expression, then_statement, else_statement, instructions);
             }
-            AstStatement::Label { .. } => {}
-            AstStatement::Goto { .. } => {}
+            AstStatement::Label { label, statement } => {
+                let label = TackyInstruction::Label {identifier: label.clone()};
+                instructions.push(label);
+                let _statement = self.emit_statement(statement, instructions);
+            }
+            AstStatement::Goto { target } => {
+                let jmp = TackyInstruction::Jump {target: target.clone()};
+                instructions.push(jmp);
+            }
         }
     }
 
