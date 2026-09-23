@@ -323,6 +323,8 @@ impl TackyEmit {
             AstStatement::If { expression, then_statement, else_statement } => {
                 self.emit_if(expression, then_statement, else_statement, instructions);
             }
+            AstStatement::Label { .. } => {}
+            AstStatement::Goto { .. } => {}
         }
     }
 

@@ -209,6 +209,8 @@ impl Resolver {
 
                 Ok(AstStatement::If {expression: result_expression.unwrap(), then_statement: Box::new(result_then.unwrap()), else_statement: result_else})
             }
+            AstStatement::Label { label: _, statement: _ } => todo!(),
+            AstStatement::Goto { target: _ } => todo!()
         }
     }
 

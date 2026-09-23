@@ -103,7 +103,9 @@ fn main() -> Result<(), std::io::Error> {
 
     let ast_program = program_result.unwrap();
     if action == "--parse" {
-        print!("{ast_program:?}");
+        let prog = format!("{ast_program:?}");
+        let fmt_prog = utils::format_ast(prog);
+        print!("{fmt_prog}");
 
         // we only want to parse, so let's exit here
         process::exit(0);

@@ -5,5 +5,7 @@ pub enum AstStatement {
     Return{expression: AstExpression},
     Expression{ expression: AstExpression},
     If{expression: AstExpression, then_statement : Box<AstStatement>, else_statement: Option<Box<AstStatement>>},
-    Null
+    Null,
+    Label { label: String, statement: Box<AstStatement> },
+    Goto { target: String },
 }

@@ -262,6 +262,27 @@ impl Parser {
         } else if Self::check_token(tokens, ";") {
             let _ = tokens.remove(0);
             Ok(AstStatement::Null)
+        } else if Self::check_token(tokens, "goto") {
+            let _ = tokens.remove(0);
+            if tokens.len() > 0 {
+                let label = tokens.remove(0);
+                if label == ";" {
+                    return Err("invalid goto statement, missing target label".to_string())
+                } else {
+                    let _semicolon = tokens.remove(0);
+                    Ok(AstStatement::Goto { target: label.to_string() })
+                }
+            } else {
+                return Err("invalid goto statement, missing target label".to_string())
+            }
+        } else if Self::check_token_fwd(tokens, ":", 1) {
+            let label = tokens.remove(0);
+            let _ = tokens.remove(0);
+            if let Ok(statement) = self.parse_statement(tokens) {
+                Ok(AstStatement::Label{label, statement : Box::new(statement)})
+            } else {
+                Err(format!("Invalid label {label}: invalid statement ").to_string())
+            }
         } else {
             let exp = self.parse_expression(tokens, 0);
             if tokens.len() == 0 || tokens[0] != ";" {
