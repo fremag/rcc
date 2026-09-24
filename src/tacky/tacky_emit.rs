@@ -333,6 +333,7 @@ impl TackyEmit {
                 let jmp = TackyInstruction::Jump {target: target.clone()};
                 instructions.push(jmp);
             }
+            AstStatement::Compound { .. } =>todo!()
         }
     }
 
@@ -344,7 +345,7 @@ impl TackyEmit {
 
     pub fn emit_function(&mut self, function: &AstFunction) -> TackyFunction {
         let mut instructions: Vec<TackyInstruction> = Vec::new();
-        for block_item in function.body.iter() {
+        for block_item in function.body.block_items.iter() {
             let _ = match block_item {
                 AstBlockItem::Statement(statement) => {
                     let _ = self.emit_statement(statement, &mut instructions);
@@ -629,6 +630,7 @@ mod tests {
     use crate::ast_model::constant::AstConstant;
     use crate::ast_model::statement::AstStatement;
     use crate::ast_model::expression::AstUnaryOp::{BitwiseComplement, Negate};
+    use crate::ast_model::function::AstBlock;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
     use crate::utils::format_ast;
@@ -760,7 +762,7 @@ mod tests {
         };
         let function = AstFunction {
             identifier: "main".to_string(),
-            body: vec![AstBlockItem::Statement(ast_statement_return)],
+            body: AstBlock {block_items: vec![AstBlockItem::Statement(ast_statement_return)],}
         };
 
         let result = emit.emit_function(&function);
@@ -780,13 +782,13 @@ mod tests {
         let program = AstProgram {
             function: AstFunction {
                 identifier: "main".to_string(),
-                body: vec![AstBlockItem::Statement(
+                body: AstBlock {block_items: vec![AstBlockItem::Statement(
                     AstStatement::Return {
                         expression: AstExpression::Constant {
                             constant: AstConstant { value: 3 },
                         },
                     })
-                ],
+                ]},
             },
         };
 
@@ -876,7 +878,7 @@ mod tests {
         let parser = Parser::new();
         let program_result = parser.parse_program(&mut tokens).unwrap();
 
-        let mut emit = crate::tacky::tacky_emit::TackyEmit::new();
+        let mut emit = TackyEmit::new();
         let tacky_program = emit.emit_program(&program_result);
         let tacky = tacky_program.function_def.body
             .iter()
@@ -891,7 +893,7 @@ mod tests {
         let program = AstProgram {
             function: AstFunction {
                 identifier: "main".to_string(),
-                body: vec![
+                body: AstBlock {block_items: vec![
                     AstBlockItem::Declaration( AstDeclaration {
                         identifier: "a".to_string(),
                         init: Some(AstExpression::Constant {constant : AstConstant{ value: 1}})}),
@@ -899,7 +901,7 @@ mod tests {
                         identifier: "c".to_string(),
                         init: Some(AstExpression::PrefixIncrement {factor : Box::from(AstExpression::Var { identifier: "a".to_string()})})})
                 ],
-            },
+            }},
         };
 
         let result = emit.emit_program(&program);
@@ -935,14 +937,14 @@ mod tests {
         let program = AstProgram {
             function: AstFunction {
                 identifier: "main".to_string(),
-                body: vec![
+                body: AstBlock {block_items: vec![
                     AstBlockItem::Statement( AstStatement::If{
                         expression: AstExpression::Constant {constant: AstConstant {value: 42}},
                         then_statement: Box::new(AstStatement::Return {expression: AstExpression::Constant {constant: AstConstant{value: 1}}}),
                         else_statement: None
                     })
                 ],
-            },
+            }},
         };
 
         let result = emit.emit_program(&program);
@@ -972,14 +974,14 @@ mod tests {
         let program = AstProgram {
             function: AstFunction {
                 identifier: "main".to_string(),
-                body: vec![
+                body: AstBlock {block_items: vec![
                     AstBlockItem::Statement( AstStatement::If{
                         expression: AstExpression::Constant {constant: AstConstant {value: 42}},
                         then_statement: Box::new(AstStatement::Return {expression: AstExpression::Constant {constant: AstConstant{value: 1}}}),
                         else_statement: Some(Box::new(AstStatement::Return {expression: AstExpression::Constant {constant: AstConstant{value: 2}}})),
                     })
                 ],
-            },
+            }},
         };
 
         let result = emit.emit_program(&program);
@@ -1025,7 +1027,7 @@ mod tests {
         let program = AstProgram {
             function: AstFunction {
                 identifier: "main".to_string(),
-                body: vec![ block_item ],
+                body: AstBlock {block_items: vec![ block_item ]},
             },
         };
 

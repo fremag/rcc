@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use AstStatement::Return;
 use crate::ast_model::constant::AstConstant;
 use crate::ast_model::expression::{AstExpression, AstBinaryOp, AstUnaryOp};
-use crate::ast_model::function::{AstBlockItem, AstDeclaration, AstFunction};
+use crate::ast_model::function::{AstBlock, AstBlockItem, AstDeclaration, AstFunction};
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::statement::{AstStatement};
 use crate::lexer::Lexer;
@@ -436,7 +436,7 @@ impl Parser {
         if tokens.len() > 0 { tokens[0].clone()} else { "".to_string() }
     }
 
-    fn parse_function_body(&self, tokens: &mut Vec<String>) -> Result<Vec<AstBlockItem>, String> {
+    fn parse_function_body(&self, tokens: &mut Vec<String>) -> Result<AstBlock, String> {
         let mut block_items : Vec<AstBlockItem>= vec![];
         while ! Self::check_token(tokens, "}") {
             match self.parse_block_item(tokens) {
@@ -449,7 +449,7 @@ impl Parser {
             }
         }
 
-        Ok(block_items)
+        Ok(AstBlock{block_items})
     }
 
     fn parse_block_item(&self, tokens: &mut Vec<String>) -> Result<AstBlockItem, String> {
@@ -720,7 +720,7 @@ mod tests {
         let result = parser.parse_function_definition(&mut tokens);
         assert_eq!(result.is_ok(), true);
         let function = result.unwrap();
-        let ast_statement = function.body.get(0).unwrap();
+        let ast_statement = function.body.block_items.get(0).unwrap();
         let expression = match ast_statement {
             AstBlockItem::Statement(AstStatement::Return { expression }) => expression,
             _ => panic!("Invalid statement"),
@@ -752,7 +752,7 @@ mod tests {
         let result = parser.parse_program(&mut tokens);
         assert_eq!(result.is_ok(), true);
         let program = result.unwrap();
-        let expression = match program.function.body.get(0).unwrap() {
+        let expression = match program.function.body.block_items.get(0).unwrap() {
             AstBlockItem::Statement(AstStatement::Return { expression }) => expression,
             _ => panic!("Invalid statement"),
         };

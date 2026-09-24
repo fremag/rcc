@@ -1,7 +1,7 @@
 use std::collections::{HashMap};
 use crate::ast_model::constant::AstConstant;
 use crate::ast_model::expression::AstExpression;
-use crate::ast_model::function::{AstBlockItem, AstDeclaration, AstFunction};
+use crate::ast_model::function::{AstBlock, AstBlockItem, AstDeclaration, AstFunction};
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::statement::AstStatement;
 
@@ -22,8 +22,8 @@ impl Resolver {
 
     fn resolve_function(&self, ast_function: &AstFunction) -> Result<AstFunction, String> {
         let mut variable_map = HashMap::<String, String>::new();
-        let mut body : Vec<AstBlockItem>=  Vec::new();
-        for block_item in ast_function.body.iter() {
+        let mut block_items: Vec<AstBlockItem>=  Vec::new();
+        for block_item in ast_function.body.block_items.iter() {
             let ast_block_item : AstBlockItem = match block_item {
                 AstBlockItem::Statement(statement) => {
                     let result = self.resolve_statement(&statement, &mut variable_map);
@@ -40,10 +40,10 @@ impl Resolver {
                     }
                 }
             };
-            body.push(ast_block_item);
+            block_items.push(ast_block_item);
         }
 
-        Ok(AstFunction {identifier: ast_function.identifier.clone(), body})
+        Ok(AstFunction {identifier: ast_function.identifier.clone(), body: AstBlock {block_items} })
     }
 
     fn resolve_declaration(&self, ast_declaration: &AstDeclaration, variable_map: &mut HashMap<String, String>) -> Result<AstDeclaration, String> {
@@ -221,6 +221,7 @@ impl Resolver {
                 }
             },
             AstStatement::Goto { target } => Ok(AstStatement::Goto { target: target.clone() }),
+            AstStatement::Compound { .. } => todo!()
         }
     }
 
@@ -298,7 +299,7 @@ mod tests {
 
         match resolved_function {
             Ok(function) => {
-                let txt: Vec<String> = function.body.iter().map(|block_item| format!("{block_item:?}")).collect();
+                let txt: Vec<String> = function.body.block_items.iter().map(|block_item| format!("{block_item:?}")).collect();
                 Ok(txt)
             }
             Err(msg) => Err(msg)
