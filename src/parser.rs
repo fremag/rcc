@@ -221,23 +221,22 @@ impl Parser {
     pub(crate) fn parse_statement(&self, tokens: &mut Vec<String>) -> Result<AstStatement, String> {
         if Self::check_token(tokens, "return") {
             let result = self.parse_return(tokens);
-            if let Ok(AstStatement::Return {expression})  = result {
+            if let Ok(AstStatement::Return { expression }) = result {
                 Ok(Return { expression })
-            }
-            else {
+            } else {
                 Err("Invalid return expression".to_string())
             }
         } else if Self::check_token(tokens, "if") {
             let _ = tokens.remove(0);
 
-            if ! Self::check_token(tokens, "(") {
+            if !Self::check_token(tokens, "(") {
                 return Err("Invalid 'if' statement: expected (".to_string());
             }
             let _ = tokens.remove(0);
 
             let cond_exp = self.parse_expression(tokens, 0);
 
-            if ! Self::check_token(tokens, ")") {
+            if !Self::check_token(tokens, ")") {
                 return Err("Invalid 'if' statement: expected )".to_string());
             }
             let _ = tokens.remove(0);
@@ -247,18 +246,18 @@ impl Parser {
                 return Err(format!("Invalid 'then' statement {msg}").to_string());
             }
 
-            let else_statement : Option<Box<AstStatement>> = if Self::check_token(tokens, "else") {
+            let else_statement: Option<Box<AstStatement>> = if Self::check_token(tokens, "else") {
                 let _ = tokens.remove(0);
                 let else_statement = self.parse_statement(tokens);
                 if let Err(msg) = else_statement {
                     return Err(format!("Invalid 'else' statement {msg}").to_string());
                 }
                 Some(Box::new(else_statement.unwrap()))
-            }                 else {
+            } else {
                 None
             };
 
-            Ok(AstStatement::If {expression: cond_exp.unwrap(), then_statement: Box::new(then_statement.unwrap()), else_statement })
+            Ok(AstStatement::If { expression: cond_exp.unwrap(), then_statement: Box::new(then_statement.unwrap()), else_statement })
         } else if Self::check_token(tokens, ";") {
             let _ = tokens.remove(0);
             Ok(AstStatement::Null)
@@ -279,12 +278,20 @@ impl Parser {
             let label = tokens.remove(0);
             let _ = tokens.remove(0);
             if let Ok(statement) = self.parse_statement(tokens) {
-                Ok(AstStatement::Label{label, statement : Box::new(statement)})
+                Ok(AstStatement::Label { label, statement: Box::new(statement) })
             } else {
                 Err(format!("Invalid label {label}: invalid statement ").to_string())
             }
-        } else {
-            let exp = self.parse_expression(tokens, 0);
+        } else if Self::check_token(tokens, "{") {
+            let block_result = self.parse_block(tokens);
+            match block_result {
+                Ok(ast_block) => {
+                    Ok(AstStatement::Compound { block: ast_block })
+                }
+                Err(msg) => Err(format!("Invalid block {msg}").to_string())
+            }
+        }else {
+        let exp = self.parse_expression(tokens, 0);
             if tokens.len() == 0 || tokens[0] != ";" {
                 return Err("Invalid expression".to_string());
             }
