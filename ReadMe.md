@@ -13,6 +13,148 @@ Ran 298 tests in 33.487s
 
 OK
 ```
+
+```c
+int main(void) {
+    int a = 2;
+    int b;
+    {
+        a = -4;
+        int a = 7;
+        b = a + 1;
+    }
+    return b == 8 && a == -4;
+}
+```
+
+```
+TackyProgram  {
+  function_def: TackyFunction  {
+    identifier: "main",
+    body: [
+      Copy  {
+        src: Constant(2),
+        dst: Var("a-0")
+      },
+      Unary  {
+        unary_op: Negate,
+        src: Constant(4),
+        dst: Var("tmp.0")
+      },
+      Copy  {
+        src: Var("tmp.0"),
+        dst: Var("a-0")
+      },
+      Copy  {
+        src: Constant(7),
+        dst: Var("a-2")
+      },
+      Binary  {
+        binary_op: Add,
+        src1: Var("a-2"),
+        src2: Constant(1),
+        dst: Var("tmp.1")
+      },
+      Copy  {
+        src: Var("tmp.1"),
+        dst: Var("b-1")
+      },
+      Binary  {
+        binary_op: Equal,
+        src1: Var("b-1"),
+        src2: Constant(8),
+        dst: Var("tmp.2")
+      },
+      JumpIfZero  {
+        condition: Var("tmp.2"),
+        target: "label_and_false_0"
+      },
+      Unary  {
+        unary_op: Negate,
+        src: Constant(4),
+        dst: Var("tmp.3")
+      },
+      Binary  {
+        binary_op: Equal,
+        src1: Var("a-0"),
+        src2: Var("tmp.3"),
+        dst: Var("tmp.4")
+      },
+      JumpIfZero  {
+        condition: Var("tmp.4"),
+        target: "label_and_false_0"
+      },
+      Copy  {
+        src: Constant(1),
+        dst: Var("tmp.5")
+      },
+      Jump  {
+        target: "label_end_0"
+      },
+      Label  {
+        identifier: "label_and_false_0"
+      },
+      Copy  {
+        src: Constant(0),
+        dst: Var("tmp.5")
+      },
+      Label  {
+        identifier: "label_end_0"
+      },
+      Return(Var("tmp.5")),
+      Return(Constant(0))
+    ]
+  }
+}
+```
+
+```asm
+       .globl main
+main:
+        pushq %rbp
+        movq %rsp, %rbp
+        subq $36, %rsp
+        movl $2, -4(%rbp)
+        movl $4, -8(%rbp)
+        negl -8(%rbp)
+        movl -8(%rbp), %r10d
+        movl %r10d, -4(%rbp)
+        movl $7, -12(%rbp)
+        movl -12(%rbp), %r10d
+        movl %r10d, -16(%rbp)
+        addl $1, -16(%rbp) 
+        movl -16(%rbp), %r10d
+        movl %r10d, -20(%rbp)
+        cmpl $8, -20(%rbp) 
+        movl $0, -24(%rbp)
+        setE -24(%rbp)
+        cmpl $0, -24(%rbp) 
+        jE .L_label_and_false_0
+        movl $4, -28(%rbp)
+        negl -28(%rbp)
+        movl -28(%rbp), %r10d
+        cmpl %r10d, -4(%rbp) 
+        movl $0, -32(%rbp)
+        setE -32(%rbp)
+        cmpl $0, -32(%rbp) 
+        jE .L_label_and_false_0
+        movl $1, -36(%rbp)
+        jmp  .L_label_end_0
+        .L_label_and_false_0:
+        movl $0, -36(%rbp)
+        .L_label_end_0:
+        movl -36(%rbp), %eax
+        movq %rbp, %rsp
+        popq %rbp
+        ret
+        movl $0, %eax
+        movq %rbp, %rsp
+        popq %rbp
+        ret
+        .section .note.GNU-stack,"",@progbits
+```
+
+
 </details>
 
 <details>
