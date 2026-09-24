@@ -325,23 +325,12 @@ impl Parser {
         }
         let _ = tokens.remove(0);
 
-        if !Self::check_token(tokens, "{") {
-            return Err("nope".to_string());
-        }
-        let _ = tokens.remove(0);
 
-        let result = self.parse_function_body(tokens);
-        if result.is_err() {
-            return Err(result.unwrap_err());
+        let body_result = self.parse_block(tokens);
+        match body_result {
+            Ok(body) => Ok(AstFunction { identifier, body }),
+            Err(msg) => Err(format!("Invalid function: {msg}")),
         }
-
-        if !Self::check_token(tokens, "}") {
-            return Err("nope".to_string());
-        }
-        let _ = tokens.remove(0);
-
-        let body = result.unwrap();
-        Ok(AstFunction { identifier, body })
     }
 
     fn check_token(tokens: &mut Vec<String>, token: &str) -> bool {
@@ -504,7 +493,26 @@ impl Parser {
            Err("Invalid expression".to_string())
        }
     }
+    fn parse_block(&self, tokens: &mut Vec<String>) -> Result<AstBlock, String> {
+        if !Self::check_token(tokens, "{") {
+            return Err("nope".to_string());
+        }
+        let _ = tokens.remove(0);
+
+        let result = self.parse_function_body(tokens);
+        if result.is_err() {
+            return Err(result.unwrap_err());
+        }
+
+        if !Self::check_token(tokens, "}") {
+            return Err("nope".to_string());
+        }
+        let _ = tokens.remove(0);
+
+        Ok(result.unwrap())
+    }
 }
+
 
 #[cfg(test)]
 mod tests {

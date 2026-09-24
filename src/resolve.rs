@@ -277,7 +277,7 @@ mod tests {
     }
 
     #[test_case("return x;", "Undeclared variable ! x ")]
-    #[test_case("int 42 = 10;", "Invalid program: Invalid block: Invalid identifier: 42")]
+    #[test_case("int 42 = 10;", "Invalid program: Invalid function: Invalid block: Invalid identifier: 42")]
     pub fn test_failed_resolve_declaration(code: &str, expected_error: &str) {
         let result = resolve(code);
         assert!(result.is_err());
