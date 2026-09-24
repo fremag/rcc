@@ -5,7 +5,7 @@ use crate::asm_constructs::operand::{Operand, Reg};
 use crate::asm_constructs::operand::Operand::Register;
 use crate::asm_constructs::program::AsmProgram;
 use crate::ast_model::expression::{AstExpression, AstBinaryOp};
-use crate::ast_model::function::{AstBlockItem, AstDeclaration, AstFunction};
+use crate::ast_model::function::{AstBlock, AstBlockItem, AstDeclaration, AstFunction};
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::expression::AstUnaryOp;
 use crate::ast_model::statement::AstStatement;
@@ -333,7 +333,12 @@ impl TackyEmit {
                 let jmp = TackyInstruction::Jump {target: target.clone()};
                 instructions.push(jmp);
             }
-            AstStatement::Compound { .. } =>todo!()
+            AstStatement::Compound { block } => {
+                let block_instructions = self.emit_block(&block);
+                for instruction in block_instructions {
+                    instructions.push(instruction);
+                }
+            } 
         }
     }
 
@@ -344,17 +349,7 @@ impl TackyEmit {
     }
 
     pub fn emit_function(&mut self, function: &AstFunction) -> TackyFunction {
-        let mut instructions: Vec<TackyInstruction> = Vec::new();
-        for block_item in function.body.block_items.iter() {
-            let _ = match block_item {
-                AstBlockItem::Statement(statement) => {
-                    let _ = self.emit_statement(statement, &mut instructions);
-                }
-                AstBlockItem::Declaration(ast_declaration) => {
-                    let _ = self.emit_declaration(ast_declaration, &mut instructions);
-                }
-            };
-        }
+        let mut instructions = self.emit_block(&function.body);
 
         instructions.push(TackyInstruction::Return(TackyVal::Constant(0)));
 
@@ -365,6 +360,21 @@ impl TackyEmit {
             identifier: function.identifier.clone(),
             body: instructions,
         }
+    }
+
+    fn emit_block(&mut self, block: &AstBlock) -> Vec<TackyInstruction> {
+        let mut instructions: Vec<TackyInstruction> = Vec::new();
+        for block_item in block.block_items.iter() {
+            let _ = match block_item {
+                AstBlockItem::Statement(statement) => {
+                    let _ = self.emit_statement(statement, &mut instructions);
+                }
+                AstBlockItem::Declaration(ast_declaration) => {
+                    let _ = self.emit_declaration(ast_declaration, &mut instructions);
+                }
+            };
+        }
+        instructions
     }
 
     pub fn convert_asm(&mut self, program: &TackyProgram) -> AsmProgram {

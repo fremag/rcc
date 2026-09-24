@@ -4,6 +4,18 @@ Build a Real Programming Language from Scratch
 by Nora Sandler](https://nostarch.com/writing-c-compiler)
 
 <details open>
+<summary>Chapter 7: compound statements</summary>
+
+```bash
+~/writing-a-c-compiler-tests$  ./test_compiler ../rcc/target/debug/rcc --chapter 7  --extra-credit
+----------------------------------------------------------------------
+Ran 298 tests in 33.487s
+
+OK
+```
+</details>
+
+<details>
 <summary>Chapter 6: if statement and conditional expressions</summary>
 
 ```bash

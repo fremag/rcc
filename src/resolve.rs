@@ -5,6 +5,12 @@ use crate::ast_model::function::{AstBlock, AstBlockItem, AstDeclaration, AstFunc
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::statement::AstStatement;
 
+#[derive(Debug, Clone)]
+pub struct VariableInfo {
+    pub new_name: String,
+    pub from_current_block: bool,
+}
+
 pub struct Resolver {}
 
 impl Resolver {
@@ -21,40 +27,23 @@ impl Resolver {
     }
 
     fn resolve_function(&self, ast_function: &AstFunction) -> Result<AstFunction, String> {
-        let mut variable_map = HashMap::<String, String>::new();
-        let mut block_items: Vec<AstBlockItem>=  Vec::new();
-        for block_item in ast_function.body.block_items.iter() {
-            let ast_block_item : AstBlockItem = match block_item {
-                AstBlockItem::Statement(statement) => {
-                    let result = self.resolve_statement(&statement, &mut variable_map);
-                    match result {
-                        Ok(resolved_statement) => AstBlockItem::Statement(resolved_statement),
-                        Err(msg) => return Err(msg)
-                    }
-                }
-                AstBlockItem::Declaration(declaration) => {
-                    let result = self.resolve_declaration(declaration, &mut variable_map);
-                    match result {
-                        Ok(resolved_declaration) => AstBlockItem::Declaration(resolved_declaration),
-                        Err(msg) => return Err(msg)
-                    }
-                }
-            };
-            block_items.push(ast_block_item);
+        let variable_map = HashMap::<String, VariableInfo>::new();
+        let resolved_block_result = self.resolve_block(&ast_function.body, variable_map);
+        match resolved_block_result {
+            Ok(resolved_block) => Ok(AstFunction {identifier: ast_function.identifier.clone(), body: resolved_block }),
+            Err(msg) => Err(msg)
         }
-
-        Ok(AstFunction {identifier: ast_function.identifier.clone(), body: AstBlock {block_items} })
     }
 
-    fn resolve_declaration(&self, ast_declaration: &AstDeclaration, variable_map: &mut HashMap<String, String>) -> Result<AstDeclaration, String> {
+    fn resolve_declaration(&self, ast_declaration: &AstDeclaration, variable_map: &mut HashMap<String, VariableInfo>) -> Result<AstDeclaration, String> {
         let name = &ast_declaration.identifier;
-        if variable_map.contains_key(name) {
+        if let Some(variable_info) = variable_map.get(name)  && variable_info.from_current_block {
             return Err(format!("Variable already declared: {name} "));
         }
 
         let nb_variables = variable_map.len();
         let unique_hame = format!("{name}-{nb_variables}");
-        variable_map.insert(name.clone(), unique_hame.clone());
+        variable_map.insert(name.clone(), VariableInfo {new_name: unique_hame.clone(), from_current_block: true});
 
         if let Some(init_expression) = &ast_declaration.init {
             if let Ok(resolved_init_expression) = self.resolve_expression(&init_expression, variable_map) {
@@ -67,14 +56,14 @@ impl Resolver {
         }
     }
 
-    fn resolve_expression(&self, ast_expression: &AstExpression, variable_map: &HashMap<String, String>) -> Result<AstExpression, String> {
+    fn resolve_expression(&self, ast_expression: &AstExpression, variable_map: &HashMap<String, VariableInfo>) -> Result<AstExpression, String> {
         match ast_expression {
             AstExpression::Constant { constant } => Ok(AstExpression::Constant {constant: AstConstant {value: constant.value }}),
             AstExpression::Var { identifier } => {
                 if ! variable_map.contains_key(identifier) {
                     Err(format!("Undeclared variable ! {identifier} "))
                 } else {
-                    let unique_variable_name = variable_map[identifier].clone();
+                    let unique_variable_name = variable_map[identifier].new_name.clone();
                     Ok(AstExpression::Var {identifier: unique_variable_name })
                 }
             }
@@ -168,7 +157,7 @@ impl Resolver {
         }
     }
 
-    fn resolve_statement(&self, ast_statement: &AstStatement, variable_map: &mut HashMap<String, String>) -> Result<AstStatement, String> {
+    fn resolve_statement(&self, ast_statement: &AstStatement, variable_map: &mut HashMap<String, VariableInfo>) -> Result<AstStatement, String> {
         match ast_statement {
             AstStatement::Return { expression } => {
                 let result = self.resolve_expression(&expression, variable_map);
@@ -221,18 +210,58 @@ impl Resolver {
                 }
             },
             AstStatement::Goto { target } => Ok(AstStatement::Goto { target: target.clone() }),
-            AstStatement::Compound { .. } => todo!()
+            AstStatement::Compound { block } => {
+                let new_variable_map = self.copy_variable_map(variable_map);
+                let resolved_block_result = self.resolve_block(block, new_variable_map);
+                match resolved_block_result {
+                    Ok(resolved_block) => Ok( AstStatement::Compound {block: resolved_block}),
+                    Err(msg) => Err(msg)
+                }
+            }
         }
     }
 
-    fn check_variable(ast_expression: &Box<AstExpression>, variable_map: &HashMap<String, String>) -> Result<AstExpression, String> {
+    fn check_variable(ast_expression: &Box<AstExpression>, variable_map: &HashMap<String, VariableInfo>) -> Result<AstExpression, String> {
         match ast_expression.as_ref() {
             AstExpression::Var { identifier } => match variable_map.contains_key(identifier) {
-                true => Ok(AstExpression::Var {identifier: variable_map.get(identifier).unwrap().clone()}),
+                true => Ok(AstExpression::Var {identifier: variable_map.get(identifier).unwrap().new_name.clone()}),
                 false => Err(format!("Undeclared variable : {identifier}"))
             }
             _ => Err(format!("Invalid variable expression"))
         }
+    }
+
+    fn copy_variable_map(&self, variable_map: &mut HashMap<String, VariableInfo>) -> HashMap<String, VariableInfo> {
+        let mut new_variable_map = variable_map.clone();
+        for (_, variable_info) in new_variable_map.iter_mut() {
+            variable_info.from_current_block = false;
+        }
+        new_variable_map
+    }
+
+    fn resolve_block(&self, ast_block: &AstBlock, mut variable_map: HashMap<String, VariableInfo>) -> Result<AstBlock, String> {
+        let mut block_items: Vec<AstBlockItem>=  Vec::new();
+        for block_item in ast_block.block_items.iter() {
+            let ast_block_item : AstBlockItem = match block_item {
+                AstBlockItem::Statement(statement) => {
+                    let result = self.resolve_statement(&statement, &mut variable_map);
+                    match result {
+                        Ok(resolved_statement) => AstBlockItem::Statement(resolved_statement),
+                        Err(msg) => return Err(msg)
+                    }
+                }
+                AstBlockItem::Declaration(declaration) => {
+                    let result = self.resolve_declaration(declaration, &mut variable_map);
+                    match result {
+                        Ok(resolved_declaration) => AstBlockItem::Declaration(resolved_declaration),
+                        Err(msg) => return Err(msg)
+                    }
+                }
+            };
+            block_items.push(ast_block_item);
+        }
+
+        Ok(AstBlock {block_items})
     }
 }
 
