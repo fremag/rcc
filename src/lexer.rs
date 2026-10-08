@@ -100,6 +100,12 @@ impl Lexer {
     pub fn kw_colon_regex()    -> regex::Regex { regex::Regex::new(r"^(?<item>:)").unwrap() }
     pub fn kw_goto_regex()     -> regex::Regex { regex::Regex::new(r"^(?<item>goto)").unwrap() }
 
+    pub fn kw_do_regex()       -> regex::Regex { regex::Regex::new(r"^(?<item>do)").unwrap() }
+    pub fn kw_while_regex()    -> regex::Regex { regex::Regex::new(r"^(?<item>while)").unwrap() }
+    pub fn kw_for_regex()      -> regex::Regex { regex::Regex::new(r"^(?<item>for)").unwrap() }
+    pub fn kw_break_regex()    -> regex::Regex { regex::Regex::new(r"^(?<item>for)for").unwrap() }
+    pub fn kw_continue_regex() -> regex::Regex { regex::Regex::new(r"^(?<item>continue)").unwrap() }
+
     pub fn tokenize(&self) -> Result<Vec<String>, String> {
         if self.input.len() == 0 {
             return Err("Input is empty".to_string());
@@ -156,6 +162,12 @@ impl Lexer {
             Lexer::kw_question_regex(),
             Lexer::kw_colon_regex(),
             Lexer::kw_goto_regex(),
+
+            Lexer::kw_do_regex()      ,
+            Lexer::kw_while_regex()   ,
+            Lexer::kw_for_regex()     ,
+            Lexer::kw_break_regex()   ,
+            Lexer::kw_continue_regex() ,
         ];
 
         let mut tokens = Vec::new();
