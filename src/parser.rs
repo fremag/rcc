@@ -4,7 +4,7 @@ use crate::ast_model::constant::AstConstant;
 use crate::ast_model::expression::{AstExpression, AstBinaryOp, AstUnaryOp};
 use crate::ast_model::function::{AstBlock, AstBlockItem, AstDeclaration, AstFunction};
 use crate::ast_model::program::AstProgram;
-use crate::ast_model::statement::{AstStatement};
+use crate::ast_model::statement::{AstForInit, AstStatement};
 use crate::lexer::Lexer;
 
 pub struct Parser {
@@ -290,8 +290,96 @@ impl Parser {
                 }
                 Err(msg) => Err(format!("Invalid block {msg}").to_string())
             }
-        }else {
-        let exp = self.parse_expression(tokens, 0);
+        } else if Self::check_token(tokens, "break") {
+            let _ = tokens.remove(0);
+            if tokens.len() > 0 {
+                let semicolon = tokens.remove(0);
+                if semicolon == ";" {
+                    return Ok(AstStatement::Break {label: String::new()})
+                } else {
+                    return Err(String::from("Missing ; after break keyword"))
+                }
+            } else {
+                return Err("invalid break statement, missing ;".to_string())
+            }
+        } else if Self::check_token(tokens, "continue") {
+            let _ = tokens.remove(0);
+            if tokens.len() > 0 {
+                let semicolon = tokens.remove(0);
+                if semicolon == ";" {
+                    return Ok(AstStatement::Continue {label: String::new()})
+                } else {
+                    return Err(String::from("Missing ; after continue keyword"))
+                }
+            } else {
+                return Err("invalid continue statement, missing ;".to_string())
+            }
+        } else if Self::check_token(tokens, "while") {
+            let _ = tokens.remove(0);
+
+            if !Self::check_token(tokens, "(") {
+                return Err("Invalid 'while' statement: expected (".to_string());
+            }
+            let _ = tokens.remove(0);
+
+            let cond_exp = self.parse_expression(tokens, 0);
+            if let Err(err_msg) = cond_exp {
+                return Err(format!("Invalid expression in while {err_msg}").to_string());
+            }
+
+            if !Self::check_token(tokens, ")") {
+                return Err("Invalid 'while' statement: expected )".to_string());
+            }
+            let _ = tokens.remove(0);
+
+            let body = self.parse_statement(tokens);
+            if let Err(msg) = body {
+                return Err(format!("Invalid 'while' statement body {msg}").to_string());
+            }
+
+            Ok(AstStatement::While {condition: cond_exp.unwrap(), body: Box::new(body.unwrap()), label: String::new()})
+
+        } else if Self::check_token(tokens, "do") {
+            let _ = tokens.remove(0);
+
+            let body = self.parse_statement(tokens);
+            if let Err(msg) = body {
+                return Err(format!("Invalid 'do' statement body {msg}").to_string());
+            }
+
+            if !Self::check_token(tokens, "while") {
+                return Err("Invalid 'do' statement: expected 'while'".to_string());
+            }
+            let _ = tokens.remove(0);
+
+            if !Self::check_token(tokens, "(") {
+                return Err("Invalid 'do/while' statement: expected (".to_string());
+            }
+            let _ = tokens.remove(0);
+
+            let cond_exp = self.parse_expression(tokens, 0);
+            if let Err(err_msg) = cond_exp {
+                return Err(format!("Invalid expression in do/while {err_msg}").to_string());
+            }
+
+            if !Self::check_token(tokens, ")") {
+                return Err("Invalid 'do/while' statement: expected )".to_string());
+            }
+            let _ = tokens.remove(0);
+
+            Ok(AstStatement::DoWhile { condition: cond_exp.unwrap(), body: Box::new(body.unwrap()), label: String::new() })
+        } else if Self::check_token(tokens, "for") {
+            let _ = tokens.remove(0);
+
+            if !Self::check_token(tokens, "(") {
+                return Err("Invalid 'for' statement: expected (".to_string());
+            }
+            let _ = tokens.remove(0);
+
+            let for_init = self.parse_for_init(tokens);
+            return Err("no !".to_string());
+        } else {
+            let exp = self.parse_expression(tokens, 0);
             if tokens.len() == 0 || tokens[0] != ";" {
                 return Err("Invalid expression".to_string());
             }
@@ -448,8 +536,7 @@ impl Parser {
         Ok(AstBlock{block_items})
     }
 
-    fn parse_block_item(&self, tokens: &mut Vec<String>) -> Result<AstBlockItem, String> {
-        let block_item;
+    fn parse_declaration(&self, tokens: &mut Vec<String>) -> Result<Option<AstDeclaration>, String> {
         if Self::check_token(tokens, "int") {
             let _ = tokens.remove(0);
             let identifier = tokens.remove(0);
@@ -465,7 +552,7 @@ impl Parser {
                     return Err("Invalid expression: expected ;".to_string());
                 }
                 if let Ok(expression) = init_exp {
-                    block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: Some(expression) })
+                    Ok(Some(AstDeclaration { identifier, init: Some(expression) }))
                 } else {
                     return Err("Invalid expression".to_string());
                 }
@@ -473,8 +560,21 @@ impl Parser {
                 return Err("Invalid declaration: expected ;".to_string());
             } else {
                 let _ = tokens.remove(0);
-                block_item = AstBlockItem::Declaration(AstDeclaration { identifier, init: None })
+                Ok(Some(AstDeclaration { identifier, init: None }))
             }
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn parse_block_item(&self, tokens: &mut Vec<String>) -> Result<AstBlockItem, String> {
+        let block_item;
+        let result = self.parse_declaration(tokens);
+
+        if let Ok(Some(declaration)) = result {
+            block_item = AstBlockItem::Declaration(declaration);
+        } else if let Err(msg) = result {
+            return Err(msg);
         } else {
             let statement = self.parse_statement(tokens);
             if let Ok(statement) = statement {
@@ -517,6 +617,10 @@ impl Parser {
         let _ = tokens.remove(0);
 
         Ok(result.unwrap())
+    }
+
+    fn parse_for_init(&self, tokens: &mut Vec<String>) -> Result<AstForInit, String> {
+        Err("No !".to_string())
     }
 }
 

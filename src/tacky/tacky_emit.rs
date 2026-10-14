@@ -338,7 +338,12 @@ impl TackyEmit {
                 for instruction in block_instructions {
                     instructions.push(instruction);
                 }
-            } 
+            }
+            AstStatement::Break { .. } => panic!("not implemented"),
+            AstStatement::Continue { .. } => panic!("not implemented"),
+            AstStatement::While { .. } => panic!("not implemented"),
+            AstStatement::DoWhile { .. } => panic!("not implemented"),
+            AstStatement::For { .. } => panic!("not implemented"),
         }
     }
 

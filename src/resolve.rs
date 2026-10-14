@@ -218,6 +218,11 @@ impl Resolver {
                     Err(msg) => Err(msg)
                 }
             }
+            AstStatement::Break { .. } => panic!("not implemented"),
+            AstStatement::Continue { .. } => panic!("not implemented"),
+            AstStatement::While { .. } => panic!("not implemented"),
+            AstStatement::DoWhile { .. } => panic!("not implemented"),
+            AstStatement::For { .. } => panic!("not implemented"),
         }
     }
 
