@@ -366,6 +366,11 @@ impl Parser {
                 return Err("Invalid 'do/while' statement: expected )".to_string());
             }
             let _ = tokens.remove(0);
+            
+            if !Self::check_token(tokens, ";") {
+                return Err("Invalid 'do/while' statement: expected final ;".to_string());
+            }
+            let _ = tokens.remove(0);
 
             Ok(AstStatement::DoWhile { condition: cond_exp.unwrap(), body: Box::new(body.unwrap()), label: String::new() })
         } else if Self::check_token(tokens, "for") {
@@ -381,27 +386,40 @@ impl Parser {
                 return Err(format!("Invalid 'for ' statement init {msg}").to_string());
             }
 
-            let cond = self.parse_expression(tokens, 0);
-            if let Err(msg) = cond {
-                return Err(format!("Invalid 'for' statement cond {msg}").to_string());
-            }
+            let condition= match Self::check_token(tokens, ";") {
+                true => None,
+                false => {
+                    let cond_exp = self.parse_expression(tokens, 0);
+                    if let Err(msg) = cond_exp {
+                        return Err(format!("Invalid 'for' statement cond {msg}").to_string());
+                    }
+                    Some(Box::new(cond_exp.unwrap()))
+                }
+            };
+
             if !Self::check_token(tokens, ";") {
                 return Err("Invalid 'for' statement: expected ; after cond".to_string());
             }
             let _ = tokens.remove(0);
 
-            let post =  self.parse_expression(tokens, 0);
-            if let Err(msg) = post {
-                return Err(format!("Invalid 'for' statement post {msg}").to_string());
-            }
-
+            let post = match Self::check_token(tokens, ")") {
+                true => None,
+                false => {
+                    let post_exp =  self.parse_expression(tokens, 0);
+                    if let Err(msg) = post_exp {
+                        return Err(format!("Invalid 'for' statement post {msg}").to_string());
+                    }
+                    Some(Box::new(post_exp.unwrap()))
+                }
+            };
+            
             if !Self::check_token(tokens, ")") {
                 return Err("Invalid 'for' statement: expected )".to_string());
             }
             let _ = tokens.remove(0);
 
             let body = self.parse_statement(tokens);
-            Ok(AstStatement::For {init: for_init.unwrap(), condition: Some(Box::new(cond.unwrap())), post: Some(Box::new(post.unwrap())), body: Box::new(body.unwrap()), label: String::new()})
+            Ok(AstStatement::For {init: for_init.unwrap(), condition, post , body: Box::new(body.unwrap()), label: String::new()})
         } else {
             let exp = self.parse_expression(tokens, 0);
             if tokens.len() == 0 || tokens[0] != ";" {
@@ -662,7 +680,13 @@ impl Parser {
         } else {
             let expression_result = self.parse_expression(tokens, 0);
             if let Ok(expression) = expression_result {
-               Ok(Some(AstForInit::InitExpr {initializer: Box::new(expression)}))
+                if Self::check_token(tokens, ";") {
+                    tokens.remove(0);
+                } else {
+                    return Err("Invalid for init expression, missing ;".to_string());
+                }
+
+                Ok(Some(AstForInit::InitExpr {initializer: Box::new(expression)}))
             } else {
                 Err(format!("Invalid expression: {}", expression_result.unwrap_err()))
             }
@@ -1175,6 +1199,7 @@ mod tests {
             {
             assert_eq!(declaration.identifier, "i".to_string());
             assert_eq!(init_constant.value, 42);
+            assert_eq!(tokens.len(), 0);
         } else {
             panic!("failed !")
         }
@@ -1202,6 +1227,7 @@ mod tests {
         {
             assert_eq!(identifier, "i");
             assert_eq!(cst1.value, 42);
+            assert_eq!(tokens.len(), 0);
         } else {
             panic!("failed !")
         }
@@ -1262,6 +1288,48 @@ mod tests {
             } else {
                 panic!("failed !")
             }
+        }
+    }
+
+    #[test]
+    fn test_parse_statement_for_missing_init() {
+        let lexer = Lexer::new("for(; i < 5; j++) { x=j; }".to_string());
+        let mut tokens = lexer.tokenize().unwrap();
+        let parser = Parser::new();
+        let result = parser.parse_statement(&mut tokens);
+        if let Ok(AstStatement::For {init, ..}) = result
+        {
+            assert_eq!(init.is_none(), true)
+        }  else {
+            panic!("failed !")
+        }
+    }
+
+    #[test]
+    fn test_parse_statement_for_missing_condition() {
+        let lexer = Lexer::new("for(int i=0; ; j++) { x=j; }".to_string());
+        let mut tokens = lexer.tokenize().unwrap();
+        let parser = Parser::new();
+        let result = parser.parse_statement(&mut tokens);
+        if let Ok(AstStatement::For {condition, ..}) = result
+        {
+            assert_eq!(condition.is_none(), true)
+        }  else {
+            panic!("failed !")
+        }
+    }
+
+    #[test]
+    fn test_parse_statement_for_missing_post() {
+        let lexer = Lexer::new("for(int i=0; i< 5 ; ) { x=j; }".to_string());
+        let mut tokens = lexer.tokenize().unwrap();
+        let parser = Parser::new();
+        let result = parser.parse_statement(&mut tokens);
+        if let Ok(AstStatement::For {post, ..}) = result
+        {
+            assert_eq!(post.is_none(), true)
+        }  else {
+            panic!("failed !")
         }
     }
 }
