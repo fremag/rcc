@@ -1251,6 +1251,7 @@ mod tests {
             assert_eq!(id_cond, "i");
             assert_eq!(id_post, "j");
             assert_eq!(block.block_items.len(), 1);
+            assert_eq!(label, "");
             if let AstBlockItem::Statement(body_statement) = &block.block_items[0]
                 && let AstStatement::Expression {expression : AstExpression::Assignment {left: left_assign, right: right_assign}} = body_statement
                 && let AstExpression::Var {identifier: left_assign_id} = left_assign.as_ref()
