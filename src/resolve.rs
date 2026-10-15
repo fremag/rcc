@@ -3,7 +3,7 @@ use crate::ast_model::constant::AstConstant;
 use crate::ast_model::expression::AstExpression;
 use crate::ast_model::function::{AstBlock, AstBlockItem, AstDeclaration, AstFunction};
 use crate::ast_model::program::AstProgram;
-use crate::ast_model::statement::AstStatement;
+use crate::ast_model::statement::{AstForInit, AstStatement};
 
 #[derive(Debug, Clone)]
 pub struct VariableInfo {
@@ -218,11 +218,80 @@ impl Resolver {
                     Err(msg) => Err(msg)
                 }
             }
-            AstStatement::Break { .. } => panic!("not implemented"),
-            AstStatement::Continue { .. } => panic!("not implemented"),
-            AstStatement::While { .. } => panic!("not implemented"),
-            AstStatement::DoWhile { .. } => panic!("not implemented"),
-            AstStatement::For { .. } => panic!("not implemented"),
+            AstStatement::Break { label } => Ok(AstStatement::Break {label : label.clone()}),
+            AstStatement::Continue { label } => Ok(AstStatement::Continue {label : label.clone()}),
+            AstStatement::While { condition, body, label } => {
+                let result_condition = self.resolve_expression(&condition, variable_map);
+                if let Err(msg) = result_condition {
+                    return Err(msg);
+                }
+                let result_body = self.resolve_statement(&body, variable_map);
+                if let Err(msg) = result_body {
+                    return Err(msg);
+                }
+
+                Ok(AstStatement::While {condition: result_condition.unwrap(), body: Box::new(result_body.unwrap()), label: label.clone()})
+            },
+            AstStatement::DoWhile { condition, body, label } => {
+                let result_condition = self.resolve_expression(&condition, variable_map);
+                if let Err(msg) = result_condition {
+                    return Err(msg);
+                }
+                let result_body = self.resolve_statement(&body, variable_map);
+                if let Err(msg) = result_body {
+                    return Err(msg);
+                }
+
+                Ok(AstStatement::DoWhile {condition: result_condition.unwrap(), body: Box::new(result_body.unwrap()), label: label.clone()})
+
+            },
+            AstStatement::For { init, condition, post, body, label } => {
+                let resolved_init = match init {
+                    Some(AstForInit::InitDecl {declaration}) => {
+                        let resolved_declaration_result = self.resolve_declaration(declaration, variable_map);
+                        if let Err(msg) = resolved_declaration_result {
+                            return Err(msg);
+                        }
+                        Some(AstForInit::InitDecl {declaration: Box::new(resolved_declaration_result.unwrap())})
+                    },
+                    Some(AstForInit::InitExpr {initializer}) => {
+                        let resolved_initializer_result= self.resolve_expression(&initializer, variable_map);
+                        if let Err(msg) = resolved_initializer_result {
+                            return Err(msg);
+                        }
+                        Some(AstForInit::InitExpr {initializer: Box::new(resolved_initializer_result.unwrap())})
+                    },
+                    None => None
+                };
+
+                let resolved_condition = match condition {
+                    Some(expression) => {
+                        let resolved_condition_result = self.resolve_expression(expression.as_ref(), variable_map);
+                        if let Err(msg) = resolved_condition_result {
+                            return Err(msg);
+                        }
+                        Some(Box::new(resolved_condition_result.unwrap()))
+                    }
+                    None => None
+                };
+
+                let resolved_post = match post {
+                    Some(expression) => {
+                        let resolved_post_result = self.resolve_expression(expression.as_ref(), variable_map);
+                        if let Err(msg) = resolved_post_result {
+                            return Err(msg);
+                        }
+                        Some(Box::new(resolved_post_result.unwrap()))
+                    }
+                    None => None
+                };
+
+                let resolved_body = self.resolve_statement(&body, variable_map);
+                if let Err(msg) = resolved_body {
+                    return Err(msg);
+                }
+                Ok(AstStatement::For {init: resolved_init, condition: resolved_condition, post: resolved_post, body: Box::new(resolved_body.unwrap()), label: label.clone() })
+            },
         }
     }
 
