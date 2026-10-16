@@ -27,8 +27,8 @@ impl Resolver {
     }
 
     fn resolve_function(&self, ast_function: &AstFunction) -> Result<AstFunction, String> {
-        let variable_map = HashMap::<String, VariableInfo>::new();
-        let resolved_block_result = self.resolve_block(&ast_function.body, variable_map);
+        let mut variable_map = HashMap::<String, VariableInfo>::new();
+        let resolved_block_result = self.resolve_block(&ast_function.body, &mut variable_map);
         match resolved_block_result {
             Ok(resolved_block) => Ok(AstFunction {identifier: ast_function.identifier.clone(), body: resolved_block }),
             Err(msg) => Err(msg)
@@ -211,8 +211,8 @@ impl Resolver {
             },
             AstStatement::Goto { target } => Ok(AstStatement::Goto { target: target.clone() }),
             AstStatement::Compound { block } => {
-                let new_variable_map = self.copy_variable_map(variable_map);
-                let resolved_block_result = self.resolve_block(block, new_variable_map);
+                let mut new_variable_map = self.copy_variable_map(variable_map);
+                let resolved_block_result = self.resolve_block(block, &mut new_variable_map);
                 match resolved_block_result {
                     Ok(resolved_block) => Ok( AstStatement::Compound {block: resolved_block}),
                     Err(msg) => Err(msg)
@@ -246,16 +246,18 @@ impl Resolver {
 
             },
             AstStatement::For { init, condition, post, body, label } => {
+                let mut new_variable_map = self.copy_variable_map(variable_map);
+
                 let resolved_init = match init {
                     Some(AstForInit::InitDecl {declaration}) => {
-                        let resolved_declaration_result = self.resolve_declaration(declaration, variable_map);
+                        let resolved_declaration_result = self.resolve_declaration(declaration, &mut new_variable_map);
                         if let Err(msg) = resolved_declaration_result {
                             return Err(msg);
                         }
                         Some(AstForInit::InitDecl {declaration: Box::new(resolved_declaration_result.unwrap())})
                     },
                     Some(AstForInit::InitExpr {initializer}) => {
-                        let resolved_initializer_result= self.resolve_expression(&initializer, variable_map);
+                        let resolved_initializer_result= self.resolve_expression(&initializer, &mut new_variable_map);
                         if let Err(msg) = resolved_initializer_result {
                             return Err(msg);
                         }
@@ -266,7 +268,7 @@ impl Resolver {
 
                 let resolved_condition = match condition {
                     Some(expression) => {
-                        let resolved_condition_result = self.resolve_expression(expression.as_ref(), variable_map);
+                        let resolved_condition_result = self.resolve_expression(expression.as_ref(), &mut new_variable_map);
                         if let Err(msg) = resolved_condition_result {
                             return Err(msg);
                         }
@@ -277,7 +279,7 @@ impl Resolver {
 
                 let resolved_post = match post {
                     Some(expression) => {
-                        let resolved_post_result = self.resolve_expression(expression.as_ref(), variable_map);
+                        let resolved_post_result = self.resolve_expression(expression.as_ref(), &mut new_variable_map);
                         if let Err(msg) = resolved_post_result {
                             return Err(msg);
                         }
@@ -286,7 +288,7 @@ impl Resolver {
                     None => None
                 };
 
-                let resolved_body = self.resolve_statement(&body, variable_map);
+                let resolved_body = self.resolve_statement(&body, &mut new_variable_map);
                 if let Err(msg) = resolved_body {
                     return Err(msg);
                 }
@@ -313,19 +315,19 @@ impl Resolver {
         new_variable_map
     }
 
-    fn resolve_block(&self, ast_block: &AstBlock, mut variable_map: HashMap<String, VariableInfo>) -> Result<AstBlock, String> {
+    fn resolve_block(&self, ast_block: &AstBlock, variable_map: &mut HashMap<String, VariableInfo>) -> Result<AstBlock, String> {
         let mut block_items: Vec<AstBlockItem>=  Vec::new();
         for block_item in ast_block.block_items.iter() {
             let ast_block_item : AstBlockItem = match block_item {
                 AstBlockItem::Statement(statement) => {
-                    let result = self.resolve_statement(&statement, &mut variable_map);
+                    let result = self.resolve_statement(&statement, variable_map);
                     match result {
                         Ok(resolved_statement) => AstBlockItem::Statement(resolved_statement),
                         Err(msg) => return Err(msg)
                     }
                 }
                 AstBlockItem::Declaration(declaration) => {
-                    let result = self.resolve_declaration(declaration, &mut variable_map);
+                    let result = self.resolve_declaration(declaration, variable_map);
                     match result {
                         Ok(resolved_declaration) => AstBlockItem::Declaration(resolved_declaration),
                         Err(msg) => return Err(msg)
