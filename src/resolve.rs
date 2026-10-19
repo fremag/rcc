@@ -62,91 +62,44 @@ impl Resolver {
                 }
             }
             AstExpression::Unary { unary_op, factor } => {
-                match self.resolve_expression(factor.as_ref(), variable_map) {
-                    Ok(resolved_factor) => Ok( AstExpression::Unary {unary_op: unary_op.clone(), factor: Box::new(resolved_factor)} ),
-                    Err(msg) => Err(msg)
-                }
+                let resolved_factor =  self.resolve_expression(factor.as_ref(), variable_map)?;
+                Ok( AstExpression::Unary {unary_op: unary_op.clone(), factor: Box::new(resolved_factor)} )
             }
             AstExpression::Binary { binop, left, right  } => {
-                let result_left = self.resolve_expression(left.as_ref(), variable_map);
-                if let Err(msg) = result_left {
-                    return Err(msg);
-                }
-                let result_right = self.resolve_expression(right.as_ref(), variable_map);
-                if let Err(msg) = result_right {
-                    return Err(msg);
-                }
-
-                Ok(AstExpression::Binary {binop: binop.clone(), right: Box::new(result_right.unwrap()), left: Box::new(result_left.unwrap())})
+                let result_left = self.resolve_expression(left.as_ref(), variable_map)?;
+                let result_right = self.resolve_expression(right.as_ref(), variable_map)?;
+                Ok(AstExpression::Binary {binop: binop.clone(), right: Box::new(result_right), left: Box::new(result_left)})
             }
             AstExpression::Assignment { left, right } => {
-                match left.as_ref() {
-                    AstExpression::Var { .. } => {}
-                    _ => {
-                        let left_exp = left.as_ref();
-                        return Err(format!("Invalid assignment, left is not a var identifier ! {left_exp:?}"));
-                    }
+                if let AstExpression::Var { .. } = left.as_ref() {} else {
+                    let left_exp = left.as_ref();
+                    return Err(format!("Invalid assignment, left is not a var identifier ! {left_exp:?}"));
                 }
-                let result_left = self.resolve_expression(left.as_ref(), variable_map);
-                if let Err(msg) = result_left {
-                    return Err(msg);
-                }
-                let result_right = self.resolve_expression(right.as_ref(), variable_map);
-                if let Err(msg) = result_right {
-                    return Err(msg);
-                }
-                Ok(AstExpression::Assignment {left: Box::new(result_left.unwrap()), right: Box::new(result_right.unwrap())})
+                let result_left = self.resolve_expression(left.as_ref(), variable_map)?;
+                let result_right = self.resolve_expression(right.as_ref(), variable_map)?;
+                Ok(AstExpression::Assignment {left: Box::new(result_left), right: Box::new(result_right)})
             }
             AstExpression::PrefixIncrement { factor } => {
-                let result = Self::check_variable(factor, variable_map);
-                if let Ok(resolved_factor) = result {
-                    Ok(AstExpression::PrefixIncrement {factor: Box::new(resolved_factor)})
-                } else {
-                    result
-                }
+                let resolved_factor = Self::check_variable(factor, variable_map)?;
+                Ok(AstExpression::PrefixIncrement {factor: Box::new(resolved_factor)})
             },
             AstExpression::PrefixDecrement { factor } => {
-                let result = Self::check_variable(factor, variable_map);
-                if let Ok(resolved_factor) = result {
-                    Ok(AstExpression::PrefixDecrement {factor: Box::new(resolved_factor)})
-                } else {
-                    result
-                }
+                let resolved_factor = Self::check_variable(factor, variable_map)?;
+                Ok(AstExpression::PrefixDecrement {factor: Box::new(resolved_factor)})
             },
             AstExpression::PostfixIncrement { factor } => {
-                let result = Self::check_variable(factor, variable_map);
-                if let Ok(resolved_factor) = result {
-                    Ok(AstExpression::PostfixIncrement {factor: Box::new(resolved_factor)})
-                } else {
-                    result
-                }
+                let resolved_factor = Self::check_variable(factor, variable_map)?;
+                Ok(AstExpression::PostfixIncrement {factor: Box::new(resolved_factor)})
             },
             AstExpression::PostfixDecrement { factor } => {
-                let result = Self::check_variable(factor, variable_map);
-                if let Ok(resolved_factor) = result {
-                    Ok(AstExpression::PostfixDecrement {factor: Box::new(resolved_factor)})
-                } else {
-                    result
-                }
+                let resolved_factor = Self::check_variable(factor, variable_map)?;
+                Ok(AstExpression::PostfixDecrement {factor: Box::new(resolved_factor)})
             },
             AstExpression::Conditional { condition, then_expression, else_expression } => {
-                let result_condition = self.resolve_expression(condition.as_ref(), variable_map);
-                let result_then = self.resolve_expression(then_expression.as_ref(), variable_map);
-                let result_else = self.resolve_expression(else_expression.as_ref(), variable_map);
-                if let Ok(resolved_condition) = &result_condition
-                    && let Ok(resolved_then) = &result_then
-                    && let Ok(resolved_else) = &result_else
-                {
-                    Ok(AstExpression::Conditional {condition: Box::new(resolved_condition.clone()), then_expression: Box::new(resolved_then.clone()), else_expression: Box::new(resolved_else.clone())})
-                } else if let Err(msg) = result_condition {
-                    Err(msg)
-                } else if let Err(msg) = result_then {
-                    Err(msg)
-                } else if let Err(msg) = result_else {
-                    Err(msg)
-                } else {
-                    unreachable!()
-                }
+                let resolved_condition = self.resolve_expression(condition.as_ref(), variable_map)?;
+                let resolved_then = self.resolve_expression(then_expression.as_ref(), variable_map)?;
+                let resolved_else = self.resolve_expression(else_expression.as_ref(), variable_map)?;
+                Ok(AstExpression::Conditional {condition: Box::new(resolved_condition.clone()), then_expression: Box::new(resolved_then.clone()), else_expression: Box::new(resolved_else.clone())})
             }
         }
     }
