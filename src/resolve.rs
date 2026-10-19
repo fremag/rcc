@@ -19,20 +19,14 @@ impl Resolver {
         }
 
     pub(crate) fn resolve(&self, ast_program: &AstProgram) -> Result<AstProgram, String> {
-        let result = self.resolve_function(&ast_program.function);
-        match result {
-            Ok(main_function) => Ok(AstProgram {function: main_function}),
-            Err(error) => Err(error)
-        }
+        let main_function = self.resolve_function(&ast_program.function)?;
+        Ok(AstProgram {function: main_function})
     }
 
     fn resolve_function(&self, ast_function: &AstFunction) -> Result<AstFunction, String> {
         let mut variable_map = HashMap::<String, VariableInfo>::new();
-        let resolved_block_result = self.resolve_block(&ast_function.body, &mut variable_map);
-        match resolved_block_result {
-            Ok(resolved_block) => Ok(AstFunction {identifier: ast_function.identifier.clone(), body: resolved_block }),
-            Err(msg) => Err(msg)
-        }
+        let resolved_block = self.resolve_block(&ast_function.body, &mut variable_map)?;
+        Ok(AstFunction {identifier: ast_function.identifier.clone(), body: resolved_block })
     }
 
     fn resolve_declaration(&self, ast_declaration: &AstDeclaration, variable_map: &mut HashMap<String, VariableInfo>) -> Result<AstDeclaration, String> {

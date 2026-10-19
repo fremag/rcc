@@ -117,7 +117,7 @@ fn main() -> Result<(), std::io::Error> {
         let prog = format!("{ast_program:?}");
         let fmt_prog = utils::format_ast(prog);
         let err_msg = resolved_ast_program.err().unwrap();
-        print!("Failed to resolve program::: {err_msg}\n{fmt_prog:?}");
+        print!("Failed to resolve program: {err_msg}\n{fmt_prog:?}");
         process::exit(1);
     }
 
