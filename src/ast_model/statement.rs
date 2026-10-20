@@ -10,7 +10,7 @@ pub enum AstStatement {
     Break { label: String },
     Continue { label: String },
     While{ condition: AstExpression, body : Box<AstStatement>, label: String },
-    DoWhile{ condition: AstExpression, body : Box<AstStatement>, label: String },
+    DoWhile{ condition: AstExpression, body : Box<AstStatement>, label:  String },
     For{init: Option<AstForInit>, condition : Option<Box<AstExpression>>, post: Option<Box<AstExpression>>, body: Box<AstStatement>, label: String },
     Null,
     Label { label: String, statement: Box<AstStatement> },

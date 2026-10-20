@@ -5,6 +5,7 @@ pub mod parser;
 mod tacky;
 mod resolve;
 mod utils;
+mod loop_label;
 
 use crate::lexer::Lexer;
 use crate::parser::Parser;
@@ -13,6 +14,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 use std::process::Command;
+use crate::loop_label::LoopLabel;
 use crate::resolve::Resolver;
 
 fn change_extension(input_file: &str, extension: &str) -> PathBuf {
@@ -121,8 +123,19 @@ fn main() -> Result<(), std::io::Error> {
         process::exit(1);
     }
 
+    
+    let mut loop_label = LoopLabel::new();
+    let labeled_program_result = loop_label.label_loops(&resolved_ast_program.unwrap());
+    if labeled_program_result.is_err() {
+        let prog = format!("{labeled_program_result:?}");
+        let fmt_prog = utils::format_ast(prog);
+        let err_msg = labeled_program_result.err().unwrap();
+        print!("Failed to label loops in  program: {err_msg}\n{fmt_prog:?}");
+        process::exit(1);
+    }
+    
     if action == "--validate" {
-        let prog = format!("{resolved_ast_program:?}");
+        let prog = format!("{labeled_program_result:?}");
         let fmt_prog = utils::format_ast(prog);
         print!("{fmt_prog}");
 
@@ -131,7 +144,7 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     let mut emit = crate::tacky::tacky_emit::TackyEmit::new();
-    let tacky_program = emit.emit_program(&resolved_ast_program.unwrap());
+    let tacky_program = emit.emit_program(&labeled_program_result.unwrap());
     print!("{}", utils::format_ast(format!("{tacky_program:?}")));
     if action == "--tacky" {
         // we only want to emit tacky, so let's exit here
