@@ -8,7 +8,7 @@ use crate::ast_model::expression::{AstExpression, AstBinaryOp};
 use crate::ast_model::function::{AstBlock, AstBlockItem, AstDeclaration, AstFunction};
 use crate::ast_model::program::AstProgram;
 use crate::ast_model::expression::AstUnaryOp;
-use crate::ast_model::statement::AstStatement;
+use crate::ast_model::statement::{AstForInit, AstStatement};
 use crate::tacky::TackyVal::Constant;
 use crate::tacky::{TackyBinaryOp, TackyFunction, TackyInstruction, TackyProgram, TackyUnaryOp, TackyVal};
 
@@ -339,11 +339,84 @@ impl TackyEmit {
                     instructions.push(instruction);
                 }
             }
-            AstStatement::Break { .. } => panic!("not implemented"),
-            AstStatement::Continue { .. } => panic!("not implemented"),
-            AstStatement::While { .. } => panic!("not implemented"),
-            AstStatement::DoWhile { .. } => panic!("not implemented"),
-            AstStatement::For { .. } => panic!("not implemented"),
+            AstStatement::Break { label } => {
+                let jmp = TackyInstruction::Jump {target: format!("break_{label}")};
+                instructions.push(jmp);
+            },
+            AstStatement::Continue { label } => {
+                let jmp = TackyInstruction::Jump {target: format!("continue_{label}")};
+                instructions.push(jmp);
+            },
+            AstStatement::While { condition, body, label } => {
+                let lbl_break = format!("break_{label}");
+                let label_break = TackyInstruction::Label {identifier: lbl_break.clone() };
+                let lbl_continue = format!("continue_{label}");
+                let label_continue = TackyInstruction::Label {identifier: lbl_continue.clone() };
+
+                instructions.push(label_continue);
+                let exp = self.emit_expression(&condition, instructions);
+                let jmp_break = TackyInstruction::JumpIfZero {condition: exp, target: lbl_break.clone()};
+                instructions.push(jmp_break);
+                self.emit_statement(&body, instructions);
+                let jmp_continue = TackyInstruction::Jump {target: lbl_continue.clone()};
+                instructions.push(jmp_continue);
+                instructions.push(label_break);
+            },
+            AstStatement::DoWhile { condition, body, label } => {
+                let lbl_start = format!("start_{label}");
+                let label_start = TackyInstruction::Label {identifier: lbl_start.clone() };
+                let label_break = TackyInstruction::Label {identifier: format!("break_{label}")};
+                let label_continue = TackyInstruction::Label {identifier: format!("continue_{label}")};
+
+                instructions.push(label_start);
+                self.emit_statement(&body, instructions);
+                instructions.push(label_continue);
+                let exp = self.emit_expression(&condition, instructions);
+                let jmp_start = TackyInstruction::JumpIfNotZero {condition: exp, target: lbl_start.clone()};
+                instructions.push(jmp_start);
+                instructions.push(label_break);
+            },
+            AstStatement::For { init, condition, post, body, label } => {
+                let lbl_start = format!("start_{label}");
+                let label_start = TackyInstruction::Label {identifier: lbl_start.clone() };
+                let lbl_break = format!("break_{label}");
+                let label_break = TackyInstruction::Label {identifier: lbl_break.clone() };
+                let label_continue = TackyInstruction::Label {identifier: format!("continue_{label}")};
+
+                match init {
+                    Some(AstForInit::InitDecl {declaration}) => {
+                        self.emit_declaration(declaration, instructions);
+                    },
+                    Some(AstForInit::InitExpr {initializer}) => {
+                    self.emit_expression(&initializer, instructions);
+                    },
+                    None => {/* nothing to do */}
+                }
+
+                instructions.push(label_start);
+                match condition {
+                    Some(condition_exp) => {
+                        let cond_exp = self.emit_expression(&condition_exp, instructions);
+                        let jmp_cond = TackyInstruction::JumpIfZero {condition: cond_exp, target: lbl_break.clone()};
+                        instructions.push(jmp_cond);
+                    }
+                    None => {/* nothing to do */}
+                }
+
+                self.emit_statement(&body, instructions);
+                instructions.push(label_continue);
+                
+                match post {
+                    Some(post_exp) => {
+                        self.emit_expression(post_exp, instructions);
+                    }
+                    None => { /* nothing to do */}
+                }
+                
+                let jmp_start = TackyInstruction::Jump {target: lbl_start.clone()};
+                instructions.push(jmp_start);
+                instructions.push(label_break);
+            },
         }
     }
 

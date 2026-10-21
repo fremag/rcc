@@ -113,7 +113,7 @@ fn main() -> Result<(), std::io::Error> {
         process::exit(0);
     }
 
-    let resolver = Resolver::new();
+    let mut resolver = Resolver::new();
     let resolved_ast_program = resolver.resolve(&ast_program);
     if resolved_ast_program.is_err() {
         let prog = format!("{ast_program:?}");
