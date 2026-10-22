@@ -4,6 +4,19 @@ Build a Real Programming Language from Scratch
 by Nora Sandler](https://nostarch.com/writing-c-compiler)
 
 <details open>
+<summary>Chapter 8: loops</summary>
+
+```bash
+~/writing-a-c-compiler-tests$ ./test_compiler ../rcc/target/debug/rcc --chapter 8 
+----------------------------------------------------------------------
+Ran 240 tests in 27.502s
+
+OK
+```
+
+</details>
+
+<details>
 <summary>Chapter 7: compound statements</summary>
 
 ```bash
